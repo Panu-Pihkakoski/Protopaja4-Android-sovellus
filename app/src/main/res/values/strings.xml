@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Protopaja</string>
+
+    <string name="action_scan">Scan Devices</string>
+    <string name="action_stop_scan">Stop Scan</string>
+    <string name="action_clear_results">Clear</string>
+
+    <string name="action_navi_control">Control</string>
+    <string name="action_navi_data">Data</string>
+
+    <string name="no_devices">No Devices</string>
+</resources>
