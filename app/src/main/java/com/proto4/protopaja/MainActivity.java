@@ -249,8 +249,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     @Override
-    public void onConnected(){
+    public void onConnected(String address){
         Log.d(TAG, "Device connected");
+        connectedDevice = bleManager.getAdapter(this).getRemoteDevice(address);
         progressBar.setVisibility(View.GONE);
         toolbar.setTitle(R.string.app_name);
 

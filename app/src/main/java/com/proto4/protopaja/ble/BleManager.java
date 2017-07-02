@@ -133,7 +133,7 @@ public class BleManager implements BleGattHandler.GattListener{
             connectionState = STATE_CONNECTED;
 
             if (listener != null)
-                listener.onConnected();
+                listener.onConnected(deviceAddress);
 
             gatt.discoverServices();
 
@@ -177,7 +177,7 @@ public class BleManager implements BleGattHandler.GattListener{
 
     public interface BleManagerListener {
         void onConnecting();
-        void onConnected();
+        void onConnected(String address);
         void onDisconnected();
     }
 }
