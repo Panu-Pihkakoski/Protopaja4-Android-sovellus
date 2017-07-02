@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.Log;
@@ -128,6 +129,25 @@ public class BleManager implements BleGattHandler.GattListener{
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState){
 
+        if (newState == BluetoothProfile.STATE_CONNECTED) {
+            connectionState = STATE_CONNECTED;
+
+            if (listener != null)
+                listener.onConnected();
+
+            gatt.discoverServices();
+
+        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+            connectionState = STATE_DISCONNECTED;
+
+            if (listener != null)
+                listener.onDisconnected();
+        } else if (newState == BluetoothProfile.STATE_CONNECTING) {
+            connectionState = STATE_CONNECTING;
+
+            if (listener != null)
+                listener.onConnecting();
+        }
     }
 
     @Override
@@ -158,5 +178,6 @@ public class BleManager implements BleGattHandler.GattListener{
     public interface BleManagerListener {
         void onConnecting();
         void onConnected();
+        void onDisconnected();
     }
 }
