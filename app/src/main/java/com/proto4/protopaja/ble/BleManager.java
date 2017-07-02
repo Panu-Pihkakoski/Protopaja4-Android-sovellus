@@ -65,6 +65,14 @@ public class BleManager implements BleGattHandler.GattListener{
         }
     }
 
+    public int getConnectionState(){
+        return connectionState;
+    }
+
+    public BluetoothDevice getConnectedDevice(){
+        return device;
+    }
+
     public boolean connect(Context context, String address) {
         if (adapter == null || address == null) {
             Log.w(TAG, "connect: BluetoothAdapter not initialized or unspecified address.");
@@ -133,7 +141,7 @@ public class BleManager implements BleGattHandler.GattListener{
             connectionState = STATE_CONNECTED;
 
             if (listener != null)
-                listener.onConnected(deviceAddress);
+                listener.onConnected();
 
             gatt.discoverServices();
 
@@ -177,7 +185,7 @@ public class BleManager implements BleGattHandler.GattListener{
 
     public interface BleManagerListener {
         void onConnecting();
-        void onConnected(String address);
+        void onConnected();
         void onDisconnected();
     }
 }

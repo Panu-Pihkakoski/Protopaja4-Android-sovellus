@@ -165,6 +165,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
+    @Override
+    protected void onDestroy(){
+        // release used bluetooth resources appropriately
+
+        super.onDestroy();
+    }
+
     private void setListItems(int type){
         if (type == ITEM_TYPE_BT_DEVICE){  // listing scanned bluetooth devices
             ArrayAdapter<BluetoothDevice> adapter = new ArrayAdapter<BluetoothDevice>(this,
@@ -249,9 +256,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     @Override
-    public void onConnected(String address){
+    public void onConnected(){
         Log.d(TAG, "Device connected");
-        connectedDevice = bleManager.getAdapter(this).getRemoteDevice(address);
+        connectedDevice = bleManager.getConnectedDevice();
         progressBar.setVisibility(View.GONE);
         toolbar.setTitle(R.string.app_name);
 
