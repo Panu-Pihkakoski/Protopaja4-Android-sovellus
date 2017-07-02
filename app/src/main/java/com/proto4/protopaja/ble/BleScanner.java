@@ -45,6 +45,18 @@ public class BleScanner {
         handler = new Handler();
     }
 
+    public void setSettings(ScanSettings settings){
+        scanSettings = settings;
+    }
+
+    public void setFilters(ArrayList<ScanFilter> filters){
+        scanFilters = filters;
+    }
+
+    public void addFilter(ScanFilter filter){
+        scanFilters.add(filter);
+    }
+
     public boolean isReady(){
         return scanner != null;
     }
