@@ -121,7 +121,8 @@ public class BleScanner {
                 for(byte byteChar : data)
                     stringBuilder.append(String.format("%02X ", byteChar));
                 Log.d(TAG, "[" + result.getDevice().getAddress() + "] " +
-                        "Scan record bytes:\n" + stringBuilder.toString() + "\n");
+                        "Scan record bytes:\n" + stringBuilder.toString() + "\n("
+                        + dataString + ")");
             }
 
             BluetoothDevice device = result.getDevice();
