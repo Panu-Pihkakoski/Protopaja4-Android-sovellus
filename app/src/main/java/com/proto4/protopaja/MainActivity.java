@@ -263,6 +263,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
             return;
         }
+        bleManager.disconnect();
         if (bleScanner == null)
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
         if (!bleScanner.isReady())

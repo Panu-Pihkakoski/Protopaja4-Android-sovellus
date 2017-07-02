@@ -116,6 +116,15 @@ public class BleManager implements BleGattHandler.GattListener{
         }
     }
 
+    private void close() {
+        if (gatt != null) {
+            gatt.close();
+            gatt = null;
+            deviceAddress = null;
+            device = null;
+        }
+    }
+
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState){
 
