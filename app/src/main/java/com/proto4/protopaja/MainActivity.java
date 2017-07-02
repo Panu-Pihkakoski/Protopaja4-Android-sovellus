@@ -3,6 +3,8 @@ package com.proto4.protopaja;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -168,6 +170,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     protected void onDestroy(){
         // release used bluetooth resources appropriately
+        bleManager.disconnect();
+        bleManager.close();
 
         super.onDestroy();
     }
@@ -270,6 +274,21 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     public void onDisconnected(){
         Log.d(TAG, "Device disconnected");
+    }
+
+    @Override
+    public void onServicesDiscovered(){
+        Log.d(TAG, "Services discovered");
+    }
+
+    @Override
+    public void onDataAvailable(BluetoothGattCharacteristic characteristic){
+        Log.d(TAG, "Data available");
+    }
+
+    @Override
+    public void onDataAvailable(BluetoothGattDescriptor descriptor){
+        Log.d(TAG, "Data available");
     }
 
     public void startScan(){

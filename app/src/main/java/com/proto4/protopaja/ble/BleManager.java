@@ -125,7 +125,7 @@ public class BleManager implements BleGattHandler.GattListener{
         }
     }
 
-    private void close() {
+    public void close() {
         if (gatt != null) {
             gatt.close();
             gatt = null;
@@ -160,22 +160,28 @@ public class BleManager implements BleGattHandler.GattListener{
 
     @Override
     public void onServicesDiscovered(BluetoothGatt gatt, int status){
-
+        if (status == BluetoothGatt.GATT_SUCCESS){
+            if (listener != null)
+                listener.onServicesDiscovered();
+        }
     }
 
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status){
-
+        if (listener != null)
+            listener.onDataAvailable(characteristic);
     }
 
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic){
-
+        if (listener != null)
+            listener.onDataAvailable(characteristic);
     }
 
     @Override
     public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status){
-
+        if (listener != null)
+            listener.onDataAvailable(descriptor);
     }
 
     @Override
@@ -187,5 +193,9 @@ public class BleManager implements BleGattHandler.GattListener{
         void onConnecting();
         void onConnected();
         void onDisconnected();
+        void onServicesDiscovered();
+        void onDataAvailable(BluetoothGattCharacteristic characteristic);
+        void onDataAvailable(BluetoothGattDescriptor descriptor);
+
     }
 }
