@@ -166,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     private void setListItems(int type){
-        if (type == ITEM_TYPE_BT_DEVICE){
+        if (type == ITEM_TYPE_BT_DEVICE){  // listing scanned bluetooth devices
             ArrayAdapter<BluetoothDevice> adapter = new ArrayAdapter<BluetoothDevice>(this,
                     android.R.layout.simple_list_item_1, foundDevices){
                 @Override
@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 noDevicesTextView.setVisibility(View.GONE);
                 listView.setVisibility(View.VISIBLE);
             }
-        } else if (type == ITEM_TYPE_DALI_UNIT) {
+        } else if (type == ITEM_TYPE_DALI_UNIT) {  // listing controllable dali units/groups
             ArrayAdapter<DaliUnit> adapter = new ArrayAdapter<DaliUnit>(this,
                     android.R.layout.simple_list_item_1, daliUnits){
                 @Override
@@ -225,6 +225,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     // bluetooth
     @Override
     public void onDeviceFound(BluetoothDevice device){
+        Log.d(TAG, "Device found (" + device.getAddress() + ")");
         foundDevices.add(device);
         ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
         if (foundDevices.size() == 1) {
@@ -235,24 +236,32 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     @Override
     public void onScanStopped(){
+        Log.d(TAG, "Scan stopped");
         progressBar.setVisibility(View.GONE);
         toolbar.setTitle(R.string.app_name);
     }
 
     @Override
     public void onConnecting(){
+        Log.d(TAG, "Connecting to device...");
         progressBar.setVisibility(View.VISIBLE);
         toolbar.setTitle("Connecting...");
     }
 
     @Override
     public void onConnected(){
+        Log.d(TAG, "Device connected");
         progressBar.setVisibility(View.GONE);
         toolbar.setTitle(R.string.app_name);
 
         // get dali units
 
         setListItems(ITEM_TYPE_DALI_UNIT);
+    }
+
+    @Override
+    public void onDisconnected(){
+        Log.d(TAG, "Device disconnected");
     }
 
     public void startScan(){
