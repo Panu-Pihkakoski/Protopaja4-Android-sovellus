@@ -5,11 +5,14 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.Log;
+
+import java.util.List;
 
 /**
  * Created by user on 29.06.17.
@@ -118,6 +121,15 @@ public class BleManager implements BleGattHandler.GattListener{
         }
         gatt.disconnect();
     }
+
+
+    public List<BluetoothGattService> getGattServices(){
+        if (gatt != null)
+            return gatt.getServices();
+        else
+            return null;
+    }
+
 
     public void clearHandler() {
         if (gattHandler != null) {
