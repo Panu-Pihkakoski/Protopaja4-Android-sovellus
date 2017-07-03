@@ -177,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     private void setListItems(int type){
+        Log.d(TAG, "setting list items of type " + type);
         if (type == ITEM_TYPE_BT_DEVICE){  // listing scanned bluetooth devices
             ArrayAdapter<BluetoothDevice> adapter = new ArrayAdapter<BluetoothDevice>(this,
                     android.R.layout.simple_list_item_1, foundDevices){
@@ -255,25 +256,41 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     public void onConnecting(){
         Log.d(TAG, "Connecting to device...");
-        progressBar.setVisibility(View.VISIBLE);
-        toolbar.setTitle("Connecting...");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.VISIBLE);
+                toolbar.setTitle("Connecting...");
+            }
+        });
     }
 
     @Override
     public void onConnected(){
         Log.d(TAG, "Device connected");
         connectedDevice = bleManager.getConnectedDevice();
-        progressBar.setVisibility(View.GONE);
-        toolbar.setTitle(R.string.app_name);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE);
+                toolbar.setTitle(R.string.app_name);
+                
+                setListItems(ITEM_TYPE_DALI_UNIT);
+            }
+        });
 
-        // get dali units
-
-        setListItems(ITEM_TYPE_DALI_UNIT);
     }
 
     @Override
     public void onDisconnected(){
         Log.d(TAG, "Device disconnected");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE);
+                toolbar.setTitle(R.string.app_name);
+            }
+        });
     }
 
     @Override
