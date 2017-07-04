@@ -15,6 +15,10 @@ public class DaliGear {
         name = _name;
     }
 
+    public void setName(String _name){
+        name = _name;
+    }
+
     public void addGroupMember(DaliGear gear) {
         if (group == null)
             group = new ArrayList<>();
