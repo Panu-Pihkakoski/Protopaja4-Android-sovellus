@@ -49,10 +49,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private BluetoothDevice connectedDevice;
 
     private ArrayList<BluetoothDevice> foundDevices;
-    private ArrayList<DaliUnit> daliUnits;
+    private ArrayList<DaliGear> daliGears;
 
     private static final int ITEM_TYPE_BT_DEVICE = 0;
-    private static final int ITEM_TYPE_DALI_UNIT = 1;
+    private static final int ITEM_TYPE_DALI_GEAR = 1;
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         progressBar.setVisibility(View.GONE);
 
         foundDevices = new ArrayList<>();
-        daliUnits = new ArrayList<>();
+        daliGears = new ArrayList<>();
 
         noDevicesTextView = (TextView) findViewById(R.id.no_devices_text);
 
@@ -208,22 +208,22 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 noDevicesTextView.setVisibility(View.GONE);
                 listView.setVisibility(View.VISIBLE);
             }
-        } else if (type == ITEM_TYPE_DALI_UNIT) {  // listing controllable dali units/groups
-            ArrayAdapter<DaliUnit> adapter = new ArrayAdapter<DaliUnit>(this,
-                    android.R.layout.simple_list_item_1, daliUnits){
+        } else if (type == ITEM_TYPE_DALI_GEAR) {  // listing controllable dali units/groups
+            ArrayAdapter<DaliGear> adapter = new ArrayAdapter<DaliGear>(this,
+                    android.R.layout.simple_list_item_1, daliGears){
                 @Override
                 public View getView(int position, View covertView, ViewGroup parent){
-                    DaliUnit unit = daliUnits.get(position);
+                    DaliGear gear = daliGears.get(position);
 
                     TextView view = new TextView(getApplicationContext());
-                    if (unit.isGroup()) {
-                        view.setText("Group " + unit.getName() + ":");
-                        for (DaliUnit u : unit.getGroup())
-                            view.append("\n" + u.getName());
+                    if (gear.isGroup()) {
+                        view.setText("Group " + gear.getName() + ":");
+                        for (DaliGear g : gear.getGroup())
+                            view.append("\n" + g.getName());
                         view.setTextSize(16);
                         view.setBackgroundResource(R.color.groupItem);
                     } else {
-                        view.setText(unit.getName());
+                        view.setText(gear.getName());
                         view.setTextSize(32);
                         view.setBackgroundResource(R.color.unitItem);
                     }
@@ -278,7 +278,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
 
-                setListItems(ITEM_TYPE_DALI_UNIT);
+                setListItems(ITEM_TYPE_DALI_GEAR);
             }
         });
 
