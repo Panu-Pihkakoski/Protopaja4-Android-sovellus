@@ -13,7 +13,7 @@ public class DaliGear {
 
     private byte status;
 
-    
+
     public DaliGear(){
         this("unknown");
     }
