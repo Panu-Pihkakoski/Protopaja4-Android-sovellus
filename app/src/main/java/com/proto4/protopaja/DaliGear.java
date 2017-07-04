@@ -11,8 +11,16 @@ public class DaliGear {
     private String name;
     ArrayList<DaliGear> group;
 
+    private byte status;
+
+    
+    public DaliGear(){
+        this("unknown");
+    }
+
     public DaliGear(String _name) {
         name = _name;
+        status = 0;
     }
 
     public void setName(String _name){
@@ -43,5 +51,13 @@ public class DaliGear {
 
     public ArrayList<DaliGear> getGroup(){
         return group;
+    }
+
+    public byte getStatus(){
+        return status;
+    }
+
+    public void setStatus(byte _status){
+        status = _status;
     }
 }
