@@ -83,9 +83,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                     stopScan();
                     connect(foundDevices.get(position));
                 } else {
-                    Intent intent = new Intent(MainActivity.this, DaliDeviceActivity.class);
-                    //intent.putExtra(DaliDeviceActivity.EXTRA_UNIT, daliUnits.get(position));
-                    startActivity(intent);
+                    DaliGear gear = daliGears.get(position);
+                    gear.showInfo(!gear.showInfo()); // toggle show info
+                    ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
                 }
 
             }
@@ -227,6 +227,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                         view.setTextSize(32);
                         view.setBackgroundResource(R.color.unitItem);
                     }
+                    if (gear.showInfo()){
+                        view.append("\nInfo:\n" + gear.getInfoString());
+                    }
                     return view;
                 }
             };
@@ -279,6 +282,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 toolbar.setTitle(R.string.app_name);
 
                 setListItems(ITEM_TYPE_DALI_GEAR);
+
+                // TODO: remove this test and get actual gear data from controller
+                daliGears.clear();
+                for (int i = 0; i < 4; i++){
+                    DaliGear gear = new DaliGear("Gear #" + i);
+                    gear.setStatus((int)(Math.random()*256));
+                    daliGears.add(gear);
+                }
+                ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
             }
         });
 
@@ -344,6 +356,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void connect(BluetoothDevice device){
         Log.d(TAG, "Connecting to " + device.getAddress());
-        bleManager.connect(this, device.getAddress());
+
+        // TODO: remove this test
+        onConnected();
+
+        //bleManager.connect(this, device.getAddress());
     }
 }
