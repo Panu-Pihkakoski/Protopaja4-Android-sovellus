@@ -3,7 +3,7 @@ package com.proto4.protopaja;
 import java.util.ArrayList;
 
 /**
- * Created by user on 4.07.17.
+ *  No use so far
  */
 
 public class DaliController {

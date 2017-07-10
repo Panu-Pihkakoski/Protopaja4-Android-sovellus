@@ -420,6 +420,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                closeActiveFragment();
                 recyclerView.getAdapter().notifyDataSetChanged();
                 titleView.setText("No Devices");
                 progressBar.setVisibility(View.VISIBLE);
