@@ -1,10 +1,12 @@
 package com.proto4.protopaja;
 
 import android.Manifest;
+import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -12,36 +14,46 @@ import android.os.Build;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.proto4.protopaja.ble.BleManager;
 import com.proto4.protopaja.ble.BleScanner;
+import com.proto4.protopaja.ui.GearFragment;
+import com.proto4.protopaja.ui.ItemClickSupport;
+import com.proto4.protopaja.ui.RecyclerListAdapter;
+import com.proto4.protopaja.ui.RecyclerListItem;
 
-import org.w3c.dom.Text;
-
+import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.Arrays;
 
-public class MainActivity extends AppCompatActivity implements BleScanner.ScanListener, BleManager.BleManagerListener{
+public class MainActivity extends AppCompatActivity implements BleScanner.ScanListener,
+                BleManager.BleManagerListener, GearFragment.GearFragmentListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private Toolbar toolbar;
     private ProgressBar progressBar;
-    private ListView listView;
-    private TextView noDevicesTextView;
-    private boolean listScan;
+
+    private TextView titleView;
+
+    private RecyclerView recyclerView;
+
+    private FrameLayout fragmentLayout;
+
+    private Fragment activeFragment;
+
+    private ArrayList<RecyclerListItem> recyclerListItems;
 
     private BleManager bleManager;
     private BleScanner bleScanner;
@@ -51,11 +63,25 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private ArrayList<BluetoothDevice> foundDevices;
     private ArrayList<DaliGear> daliGears;
 
-    private static final int ITEM_TYPE_BT_DEVICE = 0;
-    private static final int ITEM_TYPE_DALI_GEAR = 1;
+    private DaliGear.StatusUpdateListener gearUpdateListener;
+
+    protected BluetoothGattService uartService;
+
+
+    private static final int ITEM_ACTION_CONNECT = 0;
+    private static final int ITEM_ACTION_OPEN = 1;
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
+
+
+    // Service Constants from adafruit's example
+    public static final String UUID_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    public static final String UUID_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+    public static final String UUID_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+    public static final String UUID_DFU = "00001530-1212-EFDE-1523-785FEABCD123";
+
+    public static final int TX_MAX_CHARS = 20;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,27 +97,42 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         foundDevices = new ArrayList<>();
         daliGears = new ArrayList<>();
 
-        noDevicesTextView = (TextView) findViewById(R.id.no_devices_text);
-
-        listView = (ListView) findViewById(R.id.main_listview);
-        setListItems(ITEM_TYPE_BT_DEVICE);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+        titleView = (TextView) findViewById(R.id.main_title_view);
+        titleView.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position,
-                                    long id){
-                if (listScan) {
-                    stopScan();
-                    connect(foundDevices.get(position));
-                } else {
-                    DaliGear gear = daliGears.get(position);
-                    gear.showInfo(!gear.showInfo()); // toggle show info
-                    ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
-                }
-
+            public void onClick(View view) {
+                if (activeFragment != null)
+                    closeActiveFragment();
             }
         });
-        listView.setVisibility(View.GONE);
+        titleView.setText("No devices");
+        titleView.setTextSize(32);
 
+
+        recyclerListItems = new ArrayList<>();
+
+        recyclerView = (RecyclerView) findViewById(R.id.main_recycler_view);
+        recyclerView.setAdapter(new RecyclerListAdapter(this, recyclerListItems));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        ItemClickSupport.addTo(recyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
+            @Override
+            public void onItemClicked(RecyclerView recyclerView, int position, View v) {
+                Log.d(TAG, "on recycler view list item clicked");
+
+                RecyclerListItem item = recyclerListItems.get(position);
+                if (item.getAction() == ITEM_ACTION_CONNECT) {
+                    stopScan();
+                    connect(item.getTitle());
+                    titleView.setText(item.getTitle());
+                } else if (item.getAction() == ITEM_ACTION_OPEN) {
+                    showGearFragment(position);
+                }
+            }
+        });
+
+        fragmentLayout = (FrameLayout) findViewById(R.id.main_fragment_content);
+        fragmentLayout.setVisibility(View.GONE);
 
         bleManager = new BleManager(this, this);
 
@@ -102,7 +143,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         requestLocationPermissionIfNeeded();
         bleScanner = new BleScanner(bleManager.getAdapter(this), this);
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -122,10 +162,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 return super.onOptionsItemSelected(item);
         }
 
-    }
-
-    private boolean bluetoothEnabled(){
-        return bleManager.getBluetoothStatus(this) == BleManager.STATUS_BT_ENABLED;
     }
 
     private void requestLocationPermissionIfNeeded(){
@@ -179,84 +215,106 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         super.onDestroy();
     }
 
-    private void setListItems(int type){
-        Log.d(TAG, "setting list items of type " + type);
-        if (type == ITEM_TYPE_BT_DEVICE){  // listing scanned bluetooth devices
-            ArrayAdapter<BluetoothDevice> adapter = new ArrayAdapter<BluetoothDevice>(this,
-                    android.R.layout.simple_list_item_1, foundDevices){
-                @Override
-                public View getView(int position, View covertView, ViewGroup parent){
-                    BluetoothDevice device = foundDevices.get(position);
-
-                    TextView view = new TextView(getApplicationContext());
-                    if (device.getName() != null)
-                        view.setText(device.getName() + "\n");
-                    else
-                        view.setText("unknown device\n");
-                    view.append(device.getAddress());
-                    view.setTextSize(32);
-                    view.setBackgroundResource(R.color.unitItem);
-                    return view;
-                }
-            };
-            listView.setAdapter(adapter);
-            listScan = true;
-            if (foundDevices.isEmpty()){
-                listView.setVisibility(View.GONE);
-                noDevicesTextView.setVisibility(View.VISIBLE);
-            } else {
-                noDevicesTextView.setVisibility(View.GONE);
-                listView.setVisibility(View.VISIBLE);
+    private void showGearFragment(final int gearPosition) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                recyclerView.setVisibility(View.GONE);
+                fragmentLayout.setVisibility(View.VISIBLE);
+                titleView.setText(daliGears.get(gearPosition).getName());
             }
-        } else if (type == ITEM_TYPE_DALI_GEAR) {  // listing controllable dali units/groups
-            ArrayAdapter<DaliGear> adapter = new ArrayAdapter<DaliGear>(this,
-                    android.R.layout.simple_list_item_1, daliGears){
-                @Override
-                public View getView(int position, View covertView, ViewGroup parent){
-                    DaliGear gear = daliGears.get(position);
+        });
 
-                    TextView view = new TextView(getApplicationContext());
-                    if (gear.isGroup()) {
-                        view.setText("Group " + gear.getName() + ":");
-                        for (DaliGear g : gear.getGroup())
-                            view.append("\n" + g.getName());
-                        view.setTextSize(16);
-                        view.setBackgroundResource(R.color.groupItem);
-                    } else {
-                        view.setText(gear.getName());
-                        view.setTextSize(32);
-                        view.setBackgroundResource(R.color.unitItem);
-                    }
-                    if (gear.showInfo()){
-                        view.append("\nInfo:\n" + gear.getInfoString());
-                    }
-                    return view;
+        GearFragment fragment = GearFragment.newInstance(gearPosition, this);
+        fragment.setInfoText(daliGears.get(gearPosition).getInfoString());
+        getFragmentManager().beginTransaction()
+                .replace(R.id.main_fragment_content, fragment)
+                .commit();
+        activeFragment = fragment;
+    }
+
+    private void closeActiveFragment() {
+        if (activeFragment != null) {
+            getFragmentManager().beginTransaction().remove(activeFragment).commit();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    fragmentLayout.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.VISIBLE);
+                    titleView.setText(connectedDevice != null ? connectedDevice.getAddress()
+                                : "No connected device");
                 }
-            };
-            listView.setAdapter(adapter);
-            listScan = false;
-            if (listView.getVisibility() == View.GONE)
-                listView.setVisibility(View.VISIBLE);
+            });
+            activeFragment = null;
         }
     }
 
+    @Override
+    public void onGearFragmentAction(int which, int value, int gearPosition) {
+        switch (which) {
+            case GearFragment.ACTION_POWER:
+                setGearPower(gearPosition, value != 0);
+                break;
+            case GearFragment.ACTION_POWER_LEVEL:
+                setGearPowerLevel(gearPosition, value);
+                break;
+            case GearFragment.ACTION_STEP:
+                // step
+                break;
+            case GearFragment.ACTION_CLOSE:
+                closeActiveFragment();
+                break;
+            default:
+                Log.d(TAG, "Invalid GearFragment action");
+        }
+    }
+
+
+    private void setGearPower(int gearPosition, boolean on) {
+        // sendData({gear_id, power_on/power_off})
+    }
+
+    private void setGearPowerLevel(int gearPosition, int powerLevel) {
+        // sendData({gear_id, power_level, value})
+    }
+
+
     // bluetooth
+
+    private boolean bluetoothEnabled(){
+        return bleManager.getBluetoothStatus(this) == BleManager.STATUS_BT_ENABLED;
+    }
+
+    // bluetooth callback methods
     @Override
     public void onDeviceFound(BluetoothDevice device){
         Log.d(TAG, "Device found (" + device.getAddress() + ")");
+
         foundDevices.add(device);
-        ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
-        if (foundDevices.size() == 1) {
-            noDevicesTextView.setVisibility(View.GONE);
-            listView.setVisibility(View.VISIBLE);
-        }
+        recyclerListItems.add(new RecyclerListItem(device.getAddress(), ITEM_ACTION_CONNECT));
+
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                //recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size()-1);
+                recyclerView.getAdapter().notifyDataSetChanged();
+                if (foundDevices.size() == 1)
+                    titleView.setText("Scanned Devices");
+            }
+        });
     }
 
     @Override
     public void onScanStopped(){
         Log.d(TAG, "Scan stopped");
-        progressBar.setVisibility(View.GONE);
-        toolbar.setTitle(R.string.app_name);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE);
+                toolbar.setTitle(R.string.app_name);
+            }
+        });
     }
 
     @Override
@@ -275,22 +333,27 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public void onConnected(){
         Log.d(TAG, "Device connected");
         connectedDevice = bleManager.getConnectedDevice();
+
+        // TODO: remove this test and get actual gear data from controller
+        daliGears.clear();
+        for (int i = 0; i < 20; i++){
+            DaliGear gear = new DaliGear("Dummy Gear #" + i);
+            gear.setStatus((int)(Math.random()*256));
+            daliGears.add(gear);
+        }
+
+        recyclerListItems.clear();
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                recyclerView.getAdapter().notifyDataSetChanged();
+                for (DaliGear gear : daliGears) {
+                    recyclerListItems.add(new RecyclerListItem(gear.getName(), ITEM_ACTION_OPEN));
+                    recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
+                }
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
-
-                setListItems(ITEM_TYPE_DALI_GEAR);
-
-                // TODO: remove this test and get actual gear data from controller
-                daliGears.clear();
-                for (int i = 0; i < 4; i++){
-                    DaliGear gear = new DaliGear("Gear #" + i);
-                    gear.setStatus((int)(Math.random()*256));
-                    daliGears.add(gear);
-                }
-                ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
             }
         });
 
@@ -311,11 +374,25 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     public void onServicesDiscovered(){
         Log.d(TAG, "Services discovered");
+        uartService = bleManager.getGattService(UUID_SERVICE);
+        if (uartService != null)
+            Log.d(TAG, "uartService set");
+        else
+            Log.d(TAG, "couldn't get uartSerice");
     }
 
     @Override
     public void onDataAvailable(BluetoothGattCharacteristic characteristic){
         Log.d(TAG, "Data available");
+        if (characteristic.getService().getUuid().toString().equalsIgnoreCase(UUID_SERVICE)) {
+            if (characteristic.getUuid().toString().equalsIgnoreCase(UUID_RX)) {
+                final byte[] bytes = characteristic.getValue();
+                final String data = new String(bytes, Charset.forName("UTF-8"));
+
+                Log.d(TAG, "data received:\n" + data);
+
+            }
+        }
     }
 
     @Override
@@ -323,9 +400,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         Log.d(TAG, "Data available");
     }
 
+    // bluetooth scan and connect
+
     public void startScan(){
-        if (!listScan)
-            setListItems(ITEM_TYPE_BT_DEVICE);
+
         if (!bluetoothEnabled()){
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
@@ -337,11 +415,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (!bleScanner.isReady())
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
         foundDevices.clear();
-        ((ArrayAdapter<?>)listView.getAdapter()).notifyDataSetChanged();
-        listView.setVisibility(View.GONE);
-        noDevicesTextView.setVisibility(View.VISIBLE);
-        progressBar.setVisibility(View.VISIBLE);
-        toolbar.setTitle("Scanning...");
+        recyclerListItems.clear();
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                recyclerView.getAdapter().notifyDataSetChanged();
+                titleView.setText("No Devices");
+                progressBar.setVisibility(View.VISIBLE);
+                toolbar.setTitle("Scanning...");
+            }
+        });
+
         bleScanner.start(BleScanner.DEFAULT_SCAN_PERIOD);
     }
 
@@ -351,15 +436,40 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void connect(String address){
         Log.d(TAG, "Connecting to " + address);
-        bleManager.connect(this, address);
+        // TODO: remove this test and uncomment line below
+        onConnected();
+        //bleManager.connect(this, address);
     }
 
     private void connect(BluetoothDevice device){
         Log.d(TAG, "Connecting to " + device.getAddress());
 
-        // TODO: remove this test
+        // TODO: remove this test and uncomment line below
         onConnected();
-
         //bleManager.connect(this, device.getAddress());
     }
+
+
+    // bluetooth send data to UART
+    protected void sendData(String text) {
+        final byte[] value = text.getBytes(Charset.forName("UTF-8"));
+        sendData(value);
+    }
+
+    protected void sendData(byte[] data) {
+        if (uartService != null) {
+            // Split the value into chunks (UART service has a maximum number of characters that can be written )
+            for (int i = 0; i < data.length; i += TX_MAX_CHARS) {
+                final byte[] chunk = Arrays.copyOfRange(data, i, Math.min(i + TX_MAX_CHARS, data.length));
+                bleManager.writeService(uartService, UUID_TX, chunk);
+            }
+        } else {
+            Log.w(TAG, "Uart Service not discovered. Unable to send data");
+        }
+    }
+
+    protected void enableRxNotifications() {
+        bleManager.enableNotification(uartService, UUID_RX, true);
+    }
+
 }

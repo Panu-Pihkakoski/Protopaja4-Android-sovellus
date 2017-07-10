@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Created by user on 29.06.17.
@@ -122,15 +123,6 @@ public class BleManager implements BleGattHandler.GattListener{
         gatt.disconnect();
     }
 
-
-    public List<BluetoothGattService> getGattServices(){
-        if (gatt != null)
-            return gatt.getServices();
-        else
-            return null;
-    }
-
-
     public void clearHandler() {
         if (gattHandler != null) {
             gattHandler.clear();
@@ -143,6 +135,68 @@ public class BleManager implements BleGattHandler.GattListener{
             gatt = null;
             deviceAddress = null;
             device = null;
+        }
+    }
+
+    public List<BluetoothGattService> getGattServices(){
+        if (gatt != null)
+            return gatt.getServices();
+        else
+            return null;
+    }
+
+    public BluetoothGattService getGattService(String uuid) {
+        if (gatt != null) {
+            final UUID serviceUuid = UUID.fromString(uuid);
+            return gatt.getService(serviceUuid);
+        } else {
+            return null;
+        }
+    }
+
+    public void readCharacteristic(BluetoothGattService service, String characteristicUUID) {
+        readService(service, characteristicUUID, null);
+    }
+
+    public void readDescriptor(BluetoothGattService service, String characteristicUUID, String descriptorUUID) {
+        readService(service, characteristicUUID, descriptorUUID);
+    }
+
+    private void readService(BluetoothGattService service, String characteristicUUID, String descriptorUUID) {
+        if (service != null) {
+            if (adapter == null || gatt == null) {
+                Log.w(TAG, "readService: BluetoothAdapter not initialized");
+                return;
+            }
+
+            gattHandler.read(service, characteristicUUID, descriptorUUID);
+            gattHandler.execute(gatt);
+        }
+    }
+
+    public void writeService(BluetoothGattService service, String uuid, byte[] value)
+    {
+        if (service != null) {
+            if (adapter == null || gatt == null) {
+                Log.w(TAG, "writeService: BluetoothAdapter not initialized");
+                return;
+            }
+
+            gattHandler.write(service, uuid, value);
+            gattHandler.execute(gatt);
+        }
+    }
+
+    public void enableNotification(BluetoothGattService service, String uuid, boolean enabled) {
+        if (service != null) {
+
+            if (adapter == null || gatt == null) {
+                Log.w(TAG, "enableNotification: BluetoothAdapter not initialized");
+                return;
+            }
+
+            gattHandler.enableNotification(service, uuid, enabled);
+            gattHandler.execute(gatt);
         }
     }
 

@@ -5,4 +5,6 @@
     <color name="colorAccent">#FF4081</color>
     <color name="unitItem">#50a050</color>
     <color name="groupItem">#5050f0</color>
+    <color name="infoItem">#505050</color>
+    <color name="title">#80c080</color>
 </resources>

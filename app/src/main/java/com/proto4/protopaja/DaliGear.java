@@ -13,10 +13,10 @@ public class DaliGear {
     private static final String TAG = DaliGear.class.getSimpleName();
 
     private String name;
-    ArrayList<DaliGear> group;
+    private ArrayList<DaliGear> group;
 
+    private int id;
     private int status;
-    private boolean showInfo;
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;
@@ -28,18 +28,50 @@ public class DaliGear {
     public static final int STATUS_POWER_FAILURE = 128;
 
     public DaliGear(){
-        this("unknown");
+        this("unknown", 0);
     }
 
     public DaliGear(String _name) {
-        Log.d(TAG, "constructing new gear object");
-        name = _name;
-        status = 0;
-        showInfo = false;
+        this(_name, 0);
     }
+
+    public DaliGear(int _id) {
+        this("unknown", _id);
+    }
+
+    public DaliGear(String _name, int _id) {
+        name = _name;
+        id = _id;
+        status = 0;
+    }
+
 
     public void setName(String _name){
         name = _name;
+    }
+
+    public String getName(){
+        return name;
+    }
+
+    public void setId(int _id) {
+        id = _id;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setStatus(int _status) {
+        status = _status;
+    }
+
+    public int getStatus(){
+        return status;
+    }
+
+    public boolean isGroup(){
+        return group != null;
     }
 
     public void addGroupMember(DaliGear gear) {
@@ -56,12 +88,8 @@ public class DaliGear {
             group = null;
     }
 
-    public boolean isGroup(){
-        return group != null;
-    }
-
-    public String getName(){
-        return name;
+    public ArrayList<DaliGear> getGroup(){
+        return group;
     }
 
     public String getInfoString() {
@@ -79,23 +107,16 @@ public class DaliGear {
         return info;
     }
 
-    public void showInfo(boolean show){
-        showInfo = show;
-    }
 
-    public boolean showInfo(){
-        return showInfo;
-    }
 
-    public ArrayList<DaliGear> getGroup(){
-        return group;
-    }
 
-    public int getStatus(){
-        return status;
-    }
-
-    public void setStatus(int _status){
+    /*public void setStatus(int _status){
         status = _status;
+        if (listener != null)
+            listener.onGearStatusUpdated(this);
+    }*/
+
+    public interface StatusUpdateListener {
+        void onGearStatusUpdated(DaliGear gear);
     }
 }

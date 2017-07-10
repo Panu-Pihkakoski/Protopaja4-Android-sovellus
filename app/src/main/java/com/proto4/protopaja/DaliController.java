@@ -8,6 +8,12 @@ import java.util.ArrayList;
 
 public class DaliController {
 
+    public static final int ACTION_POWER = 0;
+    public static final int ACTION_POWER_LEVEL = 1;
+    public static final int ACTION_STEP = 2;
+    public static final int ACTION_QUERY = 3;
+
+    /*
     private ArrayList<DaliGear> gears;
 
     public DaliController(){
@@ -29,4 +35,5 @@ public class DaliController {
         if (gears == null) return;
         gears.remove(gear);
     }
+    */
 }
