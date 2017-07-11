@@ -22,6 +22,19 @@
             android:layout_toEndOf="@id/gear_toggle_button"
             android:text="Back" />
 
+        <EditText
+            android:id="@+id/gear_edit_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/gear_rename_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/gear_back_button"
+            android:text="Rename" />
+
+
     </RelativeLayout>
 
     <RelativeLayout

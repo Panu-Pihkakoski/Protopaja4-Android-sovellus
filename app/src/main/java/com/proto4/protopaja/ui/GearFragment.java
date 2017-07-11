@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -23,7 +24,8 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
 
     private static final String TAG = GearFragment.class.getSimpleName();
 
-    private Button toggleViewButton;
+    private Button toggleViewButton, backButton, renameButton;
+    private EditText editText;
 
     private RelativeLayout controlView;
     private RelativeLayout infoView;
@@ -48,6 +50,7 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
     public static final int ACTION_STEP = 2;
     public static final int ACTION_QUERY = 3;
     public static final int ACTION_CLOSE = 4;
+    public static final int ACTION_RENAME = 5;
 
 
     public GearFragment() {
@@ -92,7 +95,7 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
             }
         });
 
-        Button backButton = activity.findViewById(R.id.gear_back_button);
+        backButton = activity.findViewById(R.id.gear_back_button);
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -100,6 +103,23 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
                 close();
             }
         });
+
+        renameButton = activity.findViewById(R.id.gear_rename_button);
+        renameButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "renameButton onClick");
+                if (editText.getVisibility() == View.GONE) {
+                    editText.setVisibility(View.VISIBLE);
+                } else {
+                    renameGear();
+                    editText.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        editText = activity.findViewById(R.id.gear_edit_text);
+        editText.setVisibility(View.GONE);
 
         controlView  = activity.findViewById(R.id.gear_control_view);
         initControls(activity);
@@ -158,6 +178,15 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
         infoView.setVisibility(showInfo ? View.VISIBLE : View.GONE);
         controlView.setVisibility(showInfo ? View.GONE : View.VISIBLE);
         toggleViewButton.setText(showInfo ? "Control" : "Info");
+    }
+
+    private void renameGear() {
+        if (listener != null)
+            listener.onGearFragmentAction(ACTION_RENAME, 0, gearPosition);
+    }
+
+    public String getNewName() {
+        return editText.getText().toString();
     }
 
     private void close() {
