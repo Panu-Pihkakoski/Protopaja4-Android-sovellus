@@ -117,7 +117,7 @@ public class DaliGear {
         Log.d(TAG, "getInfoString()");
         byte status = data[DATA_STATUS];
         String info = "";
-        info += "Power level = " + Byte.toString(data[DATA_POWER]);
+        info += "Power level = " + Byte.toString(data[DATA_POWER]) + "\n";
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";

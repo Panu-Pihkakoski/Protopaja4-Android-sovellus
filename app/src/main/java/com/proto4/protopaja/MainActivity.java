@@ -124,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         recyclerView.setAdapter(new RecyclerListAdapter(this, recyclerListItems));
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+
         ItemClickSupport.addTo(recyclerView).setOnItemClickListener(new ItemClickSupport.OnItemClickListener() {
             @Override
             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
