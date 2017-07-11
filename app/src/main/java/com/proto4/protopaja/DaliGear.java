@@ -15,8 +15,12 @@ public class DaliGear {
     private String name;
     private ArrayList<DaliGear> group;
 
-    private int id;
-    private int status;
+
+    private byte[] data;
+
+    private static final int DATA_ID = 0;
+    private static final int DATA_STATUS = 1;
+    private static final int DATA_POWER = 2;
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;
@@ -27,49 +31,65 @@ public class DaliGear {
     public static final int STATUS_MISSING_S_ADDR = 64;
     public static final int STATUS_POWER_FAILURE = 128;
 
-    public DaliGear(){
-        this("unknown", 0);
+
+
+    public DaliGear(byte[] _data) {
+        this("unknown", _data);
     }
 
     public DaliGear(String _name) {
-        this(_name, 0);
+        this(_name, new byte[]{0, 0, 0});
     }
 
-    public DaliGear(int _id) {
-        this("unknown", _id);
-    }
-
-    public DaliGear(String _name, int _id) {
+    public DaliGear(String _name, byte[] _data) {
         name = _name;
-        id = _id;
-        status = 0;
+        data = _data;
     }
 
+    // gets
+    public byte[] getData() {
+        return data;
+    }
 
-    public void setName(String _name){
-        name = _name;
+    public byte getId() {
+        return data[DATA_ID];
+    }
+
+    public byte getStatus(){
+        return data[DATA_STATUS];
+    }
+
+    public byte getPower() {
+        return data[DATA_POWER];
     }
 
     public String getName(){
         return name;
     }
 
-    public void setId(int _id) {
-        id = _id;
+    // sets
+    public void setData(byte[] _data) {
+        data = _data;
     }
 
-    public int getId() {
-        return id;
+    public void setId(byte _id) {
+        data[DATA_ID] = _id;
     }
 
-    public void setStatus(int _status) {
-        status = _status;
+    public void setStatus(byte _status) {
+        data[DATA_STATUS] = _status;
     }
 
-    public int getStatus(){
-        return status;
+    public void setPower(byte power) {
+        data[DATA_POWER] = power;
     }
 
+    public void setName(String _name){
+        name = _name;
+    }
+
+
+    // TODO: remove or put to use
     public boolean isGroup(){
         return group != null;
     }
@@ -92,9 +112,12 @@ public class DaliGear {
         return group;
     }
 
+
     public String getInfoString() {
         Log.d(TAG, "getInfoString()");
+        byte status = data[DATA_STATUS];
         String info = "";
+        info += "Power level = " + Byte.toString(data[DATA_POWER]);
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";
@@ -103,18 +126,8 @@ public class DaliGear {
         info += (status & STATUS_RESET_STATE) == 0 ? "" : "Reset state\n";
         info += (status & STATUS_MISSING_S_ADDR) == 0 ? "" : "(!) Missing short addr\n";
         info += (status & STATUS_POWER_FAILURE) == 0 ? "" : "(!) Power failure\n";
-
         return info;
     }
-
-
-
-
-    /*public void setStatus(int _status){
-        status = _status;
-        if (listener != null)
-            listener.onGearStatusUpdated(this);
-    }*/
 
     public interface StatusUpdateListener {
         void onGearStatusUpdated(DaliGear gear);

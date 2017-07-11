@@ -68,8 +68,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     protected BluetoothGattService uartService;
 
 
+    // TODO: give proper values to constants
+
     private static final int ITEM_ACTION_CONNECT = 0;
     private static final int ITEM_ACTION_OPEN = 1;
+
+
+    private static final byte SET_POWER = 0;
+
+    private static final byte MESSAGE_INIT = 0;
+    private static final byte MESSAGE_UPDATE = 1;
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
@@ -80,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public static final String UUID_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     public static final String UUID_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
     public static final String UUID_DFU = "00001530-1212-EFDE-1523-785FEABCD123";
+
 
     public static final int TX_MAX_CHARS = 20;
 
@@ -269,15 +278,55 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-
+    // set power on/off for gear at gearPosition
     private void setGearPower(int gearPosition, boolean on) {
-        // sendData({gear_id, power_on/power_off})
+        byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)(on?100:0)};
+        sendData(data);
     }
-
+    // set power level for gear at gearPosition
     private void setGearPowerLevel(int gearPosition, int powerLevel) {
-        // sendData({gear_id, power_level, value})
+        byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)powerLevel};
+        sendData(data);
     }
 
+    private void initGearList(byte[][] data, int count) {
+
+        for (int i = 0; i < count; i++) {
+            DaliGear gear = new DaliGear(data[i]);
+            daliGears.add(gear);
+        }
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                recyclerListItems.clear();
+                recyclerView.getAdapter().notifyDataSetChanged();
+                for (DaliGear gear : daliGears) {
+                    recyclerListItems.add(new RecyclerListItem(gear.getName(), ITEM_ACTION_OPEN));
+                    recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
+                }
+            }
+        });
+    }
+
+    private boolean updateGear(byte[] bytes) {
+        byte id = bytes[1];
+
+        DaliGear toUpdate = null;
+        for (DaliGear gear : daliGears) {
+            if (id == gear.getId()) {
+                toUpdate = gear;
+            }
+        }
+        if (toUpdate == null)
+            return false;
+
+        toUpdate.setData(Arrays.copyOfRange(bytes, 1, bytes.length));
+
+        Log.d(TAG, "Gear data updated:\n" + toUpdate.getInfoString());
+
+        return true;
+    }
 
     // bluetooth
 
@@ -337,21 +386,22 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         // TODO: remove this test and get actual gear data from controller
         daliGears.clear();
         for (int i = 0; i < 20; i++){
-            DaliGear gear = new DaliGear("Dummy Gear #" + i);
-            gear.setStatus((int)(Math.random()*256));
+            DaliGear gear = new DaliGear("Dummy Gear #" + i, new byte[]{(byte)i, 0, 0});
             daliGears.add(gear);
         }
-
         recyclerListItems.clear();
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // TODO: remove
                 recyclerView.getAdapter().notifyDataSetChanged();
                 for (DaliGear gear : daliGears) {
                     recyclerListItems.add(new RecyclerListItem(gear.getName(), ITEM_ACTION_OPEN));
                     recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
                 }
+
+
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
             }
@@ -375,10 +425,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public void onServicesDiscovered(){
         Log.d(TAG, "Services discovered");
         uartService = bleManager.getGattService(UUID_SERVICE);
-        if (uartService != null)
+        if (uartService != null) {
             Log.d(TAG, "uartService set");
-        else
-            Log.d(TAG, "couldn't get uartSerice");
+            enableRxNotifications();
+        } else
+            Log.d(TAG, "couldn't get uartService");
     }
 
     @Override
@@ -391,13 +442,28 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
                 Log.d(TAG, "data received:\n" + data);
 
+                // testing simple protocol
+                if (bytes[0] == MESSAGE_INIT) {     // get gears
+                    int dataByteCount = 3; // may be changed
+                    int gearCount = (int)bytes[1];
+                    byte[][] gearData = new byte[gearCount][3];
+                    for (int i = 0; i < gearCount; i++) {
+                        for (int j = 0; j < dataByteCount; j++) {
+                            gearData[i][j] = bytes[2 + j + dataByteCount * i];
+                        }
+                    }
+                    initGearList(gearData, gearCount);
+                } else if (bytes[0] == MESSAGE_UPDATE) {
+                    updateGear(bytes);
+                }
+
             }
         }
     }
 
     @Override
     public void onDataAvailable(BluetoothGattDescriptor descriptor){
-        Log.d(TAG, "Data available");
+        Log.d(TAG, "Descriptor data available");
     }
 
     // bluetooth scan and connect
