@@ -236,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         });
 
         GearFragment fragment = GearFragment.newInstance(gearPosition, this);
-        fragment.setInfoText(daliGears.get(gearPosition).getInfoString());
+        fragment.setGearData(daliGears.get(gearPosition));
         getFragmentManager().beginTransaction()
                 .replace(R.id.main_fragment_content, fragment)
                 .commit();
@@ -298,8 +298,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
     // set power level for gear at gearPosition
     private void setGearPowerLevel(int gearPosition, int powerLevel) {
-        byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)powerLevel};
-        sendData(data);
+        // TODO: remove this test and uncomment lines below
+        daliGears.get(gearPosition).setPower((byte)powerLevel);
+        ((GearFragment)activeFragment).setGearData(daliGears.get(gearPosition));
+
+        //byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)powerLevel};
+        //sendData(data);
     }
 
     private void initGearList(byte[][] data, int count) {

@@ -18,9 +18,9 @@ public class DaliGear {
 
     private byte[] data;
 
-    private static final int DATA_ID = 0;
-    private static final int DATA_STATUS = 1;
-    private static final int DATA_POWER = 2;
+    public static final int DATA_ID = 0;
+    public static final int DATA_STATUS = 1;
+    public static final int DATA_POWER = 2;
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;

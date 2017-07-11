@@ -34,6 +34,9 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
     private boolean showInfo;
 
 
+    private Switch powerSwitch;
+    private SeekBar powerSeekBar;
+
     // TODO: remove or add to layout and implement
     private Button stepUpButton;
     private Button stepDownButton;
@@ -43,7 +46,7 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
 
     private int gearPosition;
 
-
+    private int powerLevel, lastPowerLevel;
 
     public static final int ACTION_POWER = 0;
     public static final int ACTION_POWER_LEVEL = 1;
@@ -66,6 +69,7 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
         GearFragment fragment = new GearFragment();
         fragment.gearPosition = gearPosition;
         fragment.listener = listener;
+        fragment.lastPowerLevel = fragment.powerLevel = 0;
         return fragment;
     }
 
@@ -138,21 +142,28 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
     }
 
     private void initControls(Activity activity) {
-        Switch powerSwitch = activity.findViewById(R.id.gear_power_switch);
+
+        powerSwitch = activity.findViewById(R.id.gear_power_switch);
         powerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 Log.d(TAG, "powerSwitch onCheckedChanged " + (b ? "ON":"OFF"));
-                if (listener != null)
-                    listener.onGearFragmentAction(ACTION_POWER, b ? 1 : 0, gearPosition);
+                powerSeekBar.setProgress(b ? Math.max(lastPowerLevel, 1) : 0);
+                //if (listener != null)
+                //    listener.onGearFragmentAction(ACTION_POWER, b ? 1 : 0, gearPosition);
             }
         });
 
-        SeekBar powerSeekBar = activity.findViewById(R.id.gear_power_seekBar);
+        powerSeekBar = activity.findViewById(R.id.gear_power_seekBar);
         powerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 Log.d(TAG, "powerSeekBar onProgressChanged " + i);
+                if (i > 0) {
+                    if (!powerSwitch.isChecked())
+                        powerSwitch.setChecked(true);
+                    lastPowerLevel = i;
+                } else powerSwitch.setChecked(false);
                 if (listener != null)
                     listener.onGearFragmentAction(ACTION_POWER_LEVEL, i, gearPosition);
             }
@@ -165,7 +176,7 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
 
             }
         });
-
+        powerSeekBar.setProgress(powerLevel);
     }
 
     public void setListener(GearFragmentListener _listener) {
@@ -174,6 +185,11 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
 
     public void setInfoText(String text) {
         infoText = text;
+    }
+
+    public void setGearData(DaliGear gear) {
+        powerLevel = gear.getPower();
+        infoText = gear.getInfoString();
     }
 
     private void toggleView() {
