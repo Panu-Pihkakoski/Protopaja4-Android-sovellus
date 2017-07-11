@@ -18,4 +18,12 @@ public class RecyclerListItem {
     public int getAction() {
         return action;
     }
+
+    public void setTitle(String _title) {
+        title = _title;
+    }
+
+    public void setAction(int _action) {
+        action = _action;
+    }
 }

@@ -22,11 +22,6 @@
             android:layout_toEndOf="@id/gear_toggle_button"
             android:text="Back" />
 
-        <EditText
-            android:id="@+id/gear_edit_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
         <Button
             android:id="@+id/gear_rename_button"
             android:layout_width="wrap_content"
@@ -34,6 +29,12 @@
             android:layout_toEndOf="@id/gear_back_button"
             android:text="Rename" />
 
+        <EditText
+            android:id="@+id/gear_edit_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_toEndOf="@+id/gear_rename_button" />
 
     </RelativeLayout>
 
@@ -102,7 +103,9 @@
                 android:layout_below="@id/gear_power_level_text"
                 android:padding="10dp"
                 android:max="100"
-                android:minWidth="200dp" />
+                android:minWidth="200dp"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentStart="true" />
 
         </RelativeLayout>
 

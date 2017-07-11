@@ -274,6 +274,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             case GearFragment.ACTION_CLOSE:
                 closeActiveFragment();
                 break;
+            case GearFragment.ACTION_RENAME:
+                final String newName = ((GearFragment)activeFragment).getNewName();
+                daliGears.get(gearPosition).setName(newName);
+                recyclerListItems.get(gearPosition).setTitle(newName);
+                recyclerView.getAdapter().notifyItemChanged(gearPosition);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        titleView.setText(newName);
+                    }
+                });
+                break;
             default:
                 Log.d(TAG, "Invalid GearFragment action");
         }

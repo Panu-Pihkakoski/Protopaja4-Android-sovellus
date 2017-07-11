@@ -110,10 +110,15 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
             public void onClick(View view) {
                 Log.d(TAG, "renameButton onClick");
                 if (editText.getVisibility() == View.GONE) {
+                    toggleViewButton.setVisibility(View.GONE);
+                    backButton.setVisibility(View.GONE);
                     editText.setVisibility(View.VISIBLE);
                 } else {
+                    Log.d(TAG, "renaming gear...");
                     renameGear();
                     editText.setVisibility(View.GONE);
+                    toggleViewButton.setVisibility(View.VISIBLE);
+                    backButton.setVisibility(View.VISIBLE);
                 }
             }
         });
