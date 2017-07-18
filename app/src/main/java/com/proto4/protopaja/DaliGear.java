@@ -82,6 +82,10 @@ public class DaliGear {
 
     public void setPower(byte power) {
         data[DATA_POWER] = power;
+        if (power > 0 && (data[DATA_STATUS] & STATUS_POWER_ON) == 0)
+            data[DATA_STATUS] |= STATUS_POWER_ON;
+        else
+            data[DATA_STATUS] = (byte)(data[DATA_STATUS] & (0xff ^ STATUS_POWER_ON));
     }
 
     public void setName(String _name){
