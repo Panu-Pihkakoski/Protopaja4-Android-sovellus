@@ -63,8 +63,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private ArrayList<BluetoothDevice> foundDevices;
     private ArrayList<DaliGear> daliGears;
 
-    private DaliGear.StatusUpdateListener gearUpdateListener;
-
     protected BluetoothGattService uartService;
 
 

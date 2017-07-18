@@ -132,8 +132,4 @@ public class DaliGear {
         info += (status & STATUS_POWER_FAILURE) == 0 ? "" : "(!) Power failure\n";
         return info;
     }
-
-    public interface StatusUpdateListener {
-        void onGearStatusUpdated(DaliGear gear);
-    }
 }

@@ -20,7 +20,7 @@ import com.proto4.protopaja.DaliGear;
 import com.proto4.protopaja.R;
 
 
-public class GearFragment extends Fragment implements DaliGear.StatusUpdateListener {
+public class GearFragment extends Fragment {
 
     private static final String TAG = GearFragment.class.getSimpleName();
 
@@ -215,11 +215,6 @@ public class GearFragment extends Fragment implements DaliGear.StatusUpdateListe
             listener.onGearFragmentAction(ACTION_CLOSE, 0, 0);
         else
             getActivity().getFragmentManager().beginTransaction().remove(this).commit();
-    }
-
-    @Override
-    public void onGearStatusUpdated(DaliGear gear) {
-        infoViewText.setText(gear.getInfoString());
     }
 
     public interface GearFragmentListener {
