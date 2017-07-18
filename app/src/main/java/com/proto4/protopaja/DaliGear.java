@@ -84,7 +84,7 @@ public class DaliGear {
         data[DATA_POWER] = power;
         if (power > 0 && (data[DATA_STATUS] & STATUS_POWER_ON) == 0)
             data[DATA_STATUS] |= STATUS_POWER_ON;
-        else
+        else if (power == 0)
             data[DATA_STATUS] = (byte)(data[DATA_STATUS] & (0xff ^ STATUS_POWER_ON));
     }
 

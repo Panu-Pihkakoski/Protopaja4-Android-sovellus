@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private FrameLayout fragmentLayout;
 
     private Fragment activeFragment;
+    private GearFragment gearFragment;
 
     private ArrayList<RecyclerListItem> recyclerListItems;
 
@@ -233,12 +234,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         });
 
-        GearFragment fragment = GearFragment.newInstance(gearPosition, this);
-        fragment.setGearData(daliGears.get(gearPosition));
+        if (gearFragment == null)
+            gearFragment = GearFragment.newInstance(gearPosition, this);
+        gearFragment.setGearData(daliGears.get(gearPosition));
         getFragmentManager().beginTransaction()
-                .replace(R.id.main_fragment_content, fragment)
+                .replace(R.id.main_fragment_content, gearFragment)
                 .commit();
-        activeFragment = fragment;
+        activeFragment = gearFragment;
     }
 
     private void closeActiveFragment() {
@@ -273,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 closeActiveFragment();
                 break;
             case GearFragment.ACTION_RENAME:
-                final String newName = ((GearFragment)activeFragment).getNewName();
+                final String newName = gearFragment.getNewName();
                 daliGears.get(gearPosition).setName(newName);
                 recyclerListItems.get(gearPosition).setTitle(newName);
                 recyclerView.getAdapter().notifyItemChanged(gearPosition);
@@ -298,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void setGearPowerLevel(int gearPosition, int powerLevel) {
         // TODO: remove this test and uncomment lines below
         daliGears.get(gearPosition).setPower((byte)powerLevel);
-        ((GearFragment)activeFragment).setGearData(daliGears.get(gearPosition));
+        gearFragment.setGearData(daliGears.get(gearPosition));
 
         //byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)powerLevel};
         //sendData(data);
