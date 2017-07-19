@@ -80,6 +80,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private static final byte MESSAGE_INIT = 0;
     private static final byte MESSAGE_UPDATE = 1;
 
+    private static final byte MESSAGE_END = '!';
+
+    private static final byte MESSAGE_TYPE_DATA_UPDATE = 'U';
+    private static final byte MESSAGE_TYPE_COMMAND = 'D';
+    private static final byte MESSAGE_TYPE_BROADCAST = 'B';
+    //private static final byte MESSAGE_TYPE_...
+    private static final int MESSAGE_IND_TYPE = 0;
+    private static final int MESSAGE_IND_ID = 1;
+
+
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
 
@@ -608,13 +618,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-    private void decodeMessage(byte[] bytes) {
+    private void parseMessage(byte[] bytes) {
         switch (bytes[0]) {
-            case MESSAGE_INIT:
-                Log.d(TAG, "message: init");
+            case MESSAGE_TYPE_COMMAND:
+                Log.d(TAG, "message: command");
 
                 break;
-            case MESSAGE_UPDATE:
+            case MESSAGE_TYPE_BROADCAST:
+                Log.d(TAG, "message: broadcast");
+                break;
+            case MESSAGE_TYPE_DATA_UPDATE:
                 updateGear(bytes);
                 break;
             default:
