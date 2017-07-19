@@ -39,6 +39,7 @@ public class BleManager implements BleGattHandler.GattListener{
     private BleGattHandler gattHandler;
     private int connectionState;
     private String deviceAddress;
+    private boolean autoConnect;
 
     public BleManager(Context context, BleManagerListener _listener){
         adapter = getAdapter(context);
@@ -47,6 +48,15 @@ public class BleManager implements BleGattHandler.GattListener{
         listener = _listener;
         gattHandler = BleGattHandler.createHandler(this);
         connectionState = STATE_DISCONNECTED;
+        autoConnect = false;
+    }
+
+    public boolean getAutoConnect() {
+        return autoConnect;
+    }
+
+    public void setAutoConnect(boolean ac) {
+        autoConnect = ac;
     }
 
     public int getBluetoothStatus(Context context){
@@ -109,7 +119,7 @@ public class BleManager implements BleGattHandler.GattListener{
             listener.onConnecting();
         }
 
-        gatt = device.connectGatt(context, false, gattHandler); // autoconnect false
+        gatt = device.connectGatt(context, autoConnect, gattHandler); // autoconnect false
 
         return true;
     }

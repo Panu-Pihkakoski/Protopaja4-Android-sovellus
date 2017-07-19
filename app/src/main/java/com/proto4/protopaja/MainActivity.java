@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.v7.app.AlertDialog;
@@ -60,14 +61,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private BleScanner bleScanner;
 
     private BluetoothDevice connectedDevice;
+    private String deviceAddress;
 
     private ArrayList<BluetoothDevice> foundDevices;
     private ArrayList<DaliGear> daliGears;
 
-    protected BluetoothGattService uartService;
+    private BluetoothGattService uartService;
 
-
-    // TODO: give proper values to constants
+    private static final String DEVICE_ADDRESS = "DEVICE_ADDRESS";
+    private static final String AUTO_CONNECT = "AUTO_CONNECT";
 
     private static final int ITEM_ACTION_CONNECT = 0;
     private static final int ITEM_ACTION_OPEN = 1;
@@ -151,6 +153,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
         requestLocationPermissionIfNeeded();
         bleScanner = new BleScanner(bleManager.getAdapter(this), this);
+
+        loadValues(); // load saved values
+        if (deviceAddress != null) { // check if saved device address exists
+            Log.d(TAG, "Found saved device address ("+ deviceAddress + "). Connecting...");
+            connect(deviceAddress);
+        }
     }
 
     @Override
@@ -221,7 +229,28 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         bleManager.disconnect();
         bleManager.close();
 
+        // save address of connected device
+        saveValue(DEVICE_ADDRESS);
+        // save auto connect
+        saveValue(AUTO_CONNECT);
+
         super.onDestroy();
+    }
+
+    private void saveValue(String key) {
+        SharedPreferences.Editor edit = getPreferences(MODE_PRIVATE).edit();
+        if (key.equals(DEVICE_ADDRESS) && deviceAddress != null)
+            edit.putString(key, deviceAddress);
+        else if (key.equals(AUTO_CONNECT) && bleManager != null)
+            edit.putBoolean(key, bleManager.getAutoConnect());
+        edit.commit();
+    }
+
+    private void loadValues() {
+        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        deviceAddress = prefs.getString(DEVICE_ADDRESS, null);
+        if (bleManager != null)
+            bleManager.setAutoConnect(prefs.getBoolean(AUTO_CONNECT, false));
     }
 
     private void showGearFragment(final int gearPosition) {
@@ -335,8 +364,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 toUpdate = gear;
             }
         }
-        if (toUpdate == null)
-            return false;
+        if (toUpdate == null) {
+            daliGears.add(new DaliGear(Arrays.copyOfRange(bytes, 1, DaliGear.DATA_LEN + 1)));
+            recyclerListItems.add(new RecyclerListItem("New Gear", ITEM_ACTION_OPEN));
+            recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
+            return true;
+        }
 
         toUpdate.setData(Arrays.copyOfRange(bytes, 1, bytes.length));
 
@@ -399,6 +432,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public void onConnected(){
         Log.d(TAG, "Device connected");
         connectedDevice = bleManager.getConnectedDevice();
+        deviceAddress = connectedDevice.getAddress();
 
         // TODO: remove this test and get actual gear data from controller
         daliGears.clear();
@@ -535,12 +569,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
 
     // bluetooth send data to UART
-    protected void sendData(String text) {
+    private void sendData(String text) {
         final byte[] value = text.getBytes(Charset.forName("UTF-8"));
         sendData(value);
     }
 
-    protected void sendData(byte[] data) {
+    private void sendData(byte[] data) {
         if (uartService != null) {
             // Split the value into chunks (UART service has a maximum number of characters that can be written )
             for (int i = 0; i < data.length; i += TX_MAX_CHARS) {
@@ -552,7 +586,23 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-    protected void enableRxNotifications() {
+    private void decodeMessage(byte[] bytes) {
+        switch (bytes[0]) {
+            case MESSAGE_INIT:
+                Log.d(TAG, "message: init");
+
+                break;
+            case MESSAGE_UPDATE:
+                updateGear(bytes);
+                break;
+            default:
+                Log.d(TAG, "message: not recognized");
+                break;
+        }
+    }
+
+
+    private void enableRxNotifications() {
         bleManager.enableNotification(uartService, UUID_RX, true);
     }
 

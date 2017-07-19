@@ -18,6 +18,8 @@ public class DaliGear {
 
     private byte[] data;
 
+    public static final int DATA_LEN = 3;
+
     public static final int DATA_ID = 0;
     public static final int DATA_STATUS = 1;
     public static final int DATA_POWER = 2;
