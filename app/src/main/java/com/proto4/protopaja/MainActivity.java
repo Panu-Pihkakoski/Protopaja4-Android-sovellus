@@ -37,6 +37,9 @@ import com.proto4.protopaja.ui.RecyclerListItem;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements BleScanner.ScanListener,
                 BleManager.BleManagerListener, GearFragment.GearFragmentListener {
@@ -64,28 +67,45 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private String deviceAddress;
 
     private ArrayList<BluetoothDevice> foundDevices;
-    private ArrayList<DaliGear> daliGears;
+    private Map<Byte, DaliGear> gearMap;
 
     private BluetoothGattService uartService;
+
+    private byte[] currentMessage;
 
     private static final String DEVICE_ADDRESS = "DEVICE_ADDRESS";
     private static final String AUTO_CONNECT = "AUTO_CONNECT";
 
+    // list item actions on click
     private static final int ITEM_ACTION_CONNECT = 0;
     private static final int ITEM_ACTION_OPEN = 1;
 
+    private static final byte DALI_COMMAND_OFF = 0;
+    private static final byte DALI_COMMAND_DIM_UP = 1;
+    private static final byte DALI_COMMAND_DIM_DOWN = 2;
+    private static final byte DALI_COMMAND_STEP_UP = 3;
+    private static final byte DALI_COMMAND_STEP_DOWN = 4;
+    private static final byte DALI_COMMAND_RECALL_MAX_LEVEL = 5;
+    private static final byte DALI_COMMAND_RECALL_MIN_LEVEL = 6;
+    private static final byte DALI_COMMAND_STEP_DOWN_AND_OFF = 7;
+    private static final byte DALI_COMMAND_ON_AND_STEP_UP = 8;
+    private static final byte DALI_COMMAND_QUERY_STATUS = (byte)0x90;
+    private static final byte DALI_COMMAND_QUERY_POWER_LEVEL = (byte)0xa0;
 
-    private static final byte SET_POWER = 0;
 
-    private static final byte MESSAGE_INIT = 0;
-    private static final byte MESSAGE_UPDATE = 1;
+    // controller to phone
+    private static final byte MESSAGE_TYPE_GEAR_DATA = 'G';
+
+    // phone to controller
+    private static final byte MESSAGE_TYPE_QUERY = 'Q';
+    private static final byte MESSAGE_TYPE_COMMAND = 'C';
+    private static final byte MESSAGE_TYPE_POWER = 'P';
+
+    // common
+    private static final byte MESSAGE_TYPE_EXCEPTION = 'E';
 
     private static final byte MESSAGE_END = '!';
 
-    private static final byte MESSAGE_TYPE_DATA_UPDATE = 'U';
-    private static final byte MESSAGE_TYPE_COMMAND = 'D';
-    private static final byte MESSAGE_TYPE_BROADCAST = 'B';
-    //private static final byte MESSAGE_TYPE_...
     private static final int MESSAGE_IND_TYPE = 0;
     private static final int MESSAGE_IND_ID = 1;
 
@@ -117,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         progressBar.setVisibility(View.GONE);
 
         foundDevices = new ArrayList<>(); // scanned bluetooth devices
-        daliGears = new ArrayList<>(); // dali gears obtained from connected device
+        gearMap = new HashMap();
 
         // clickable title below toolbar, shows connected device address / dali gear name
         titleView = (TextView) findViewById(R.id.main_title_view);
@@ -145,13 +165,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             public void onItemClicked(RecyclerView recyclerView, int position, View v) {
                 Log.d(TAG, "on recycler view list item clicked");
 
-                RecyclerListItem item = recyclerListItems.get(position);
-                if (item.getAction() == ITEM_ACTION_CONNECT) { // connect to address in item title
-                    stopScan();
-                    connect(item.getTitle());
-                    titleView.setText(item.getTitle());
-                } else if (item.getAction() == ITEM_ACTION_OPEN) { // open gear fragment for gear at 'position'
-                    showGearFragment(position);
+                final RecyclerListItem item = recyclerListItems.get(position);
+                if (item.getAction() == ITEM_ACTION_CONNECT) { // connect to address in item extra
+                    stopScan(); // stops scan if it's running
+                    connect(item.getExtra());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            titleView.setText(item.getTitle());
+                        }
+                    });
+                } else if (item.getAction() == ITEM_ACTION_OPEN) { // open gear fragment
+                    showGearFragment(item.getId());
                 }
             }
         });
@@ -178,6 +203,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             Log.d(TAG, "Found saved device address ("+ deviceAddress + "). Connecting...");
             connect(deviceAddress);
         }
+
     }
 
     @Override
@@ -277,22 +303,26 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     // show gear fragment containing control and info ui for gear at specified position,
     // hides recycler list
-    private void showGearFragment(final int gearPosition) {
+    private void showGearFragment(final byte gearId) {
+        if (gearMap.get(gearId) == null) {
+            Log.d(TAG, "unable to show gear fragment: id " + (int)gearId + " not found");
+            return;
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 recyclerView.setVisibility(View.GONE); // hide list of gears
                 fragmentLayout.setVisibility(View.VISIBLE); // show fragment container
-                titleView.setText(daliGears.get(gearPosition).getName()); // set title
+                titleView.setText(gearMap.get(gearId).getName()); // set title
             }
         });
 
-        if (gearFragment == null) // if gearFragment isn't initialized...
-            gearFragment = GearFragment.newInstance(gearPosition, this);
-        gearFragment.setGearData(daliGears.get(gearPosition)); // to make fragment ui match gear data
+        gearFragment = GearFragment.newInstance(gearMap.get(gearId), this);
+
         getFragmentManager().beginTransaction()
                 .replace(R.id.main_fragment_content, gearFragment)
                 .commit(); // sets gear fragment on fragment container
+
         activeFragment = gearFragment;
     }
 
@@ -315,13 +345,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     // callback to handle gear fragment ui actions
     @Override
-    public void onGearFragmentAction(int which, int value, int gearPosition) {
+    public void onGearFragmentAction(int which, int value, final byte gearId) {
+        if (which != GearFragment.ACTION_CLOSE && gearMap.get(gearId) == null) {
+            Log.d(TAG, "onGearFragmentAction: gear id not valid");
+            return;
+        }
+        Log.d(TAG, "onGearFragmentAction: gear id = " + gearId);
         switch (which) {
             case GearFragment.ACTION_POWER: // set gear power on (value != 0) / off (value == 0)
-                setGearPower(gearPosition, value != 0);
+                setGearPower(gearId, value != 0);
                 break;
             case GearFragment.ACTION_POWER_LEVEL: // set gear power level
-                setGearPowerLevel(gearPosition, value);
+                setGearPowerLevel(gearId, value);
                 break;
             case GearFragment.ACTION_STEP: // not implemented
                 // step
@@ -331,12 +366,19 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 break;
             case GearFragment.ACTION_RENAME: // rename gear
                 final String newName = gearFragment.getNewName(); // get new name from fragment
-                daliGears.get(gearPosition).setName(newName); // set name
-                recyclerListItems.get(gearPosition).setTitle(newName); // update list item title
-                recyclerView.getAdapter().notifyItemChanged(gearPosition); // notify list adapter
+                gearMap.get(gearId).setName(newName); // set name
+                int i;
+                for (i = 0; i < recyclerListItems.size(); i++) {
+                    if (recyclerListItems.get(i).getId() == gearId) {
+                        recyclerListItems.get(i).setTitle(newName);
+                        break;
+                    }
+                }
+                final int idx = i;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        recyclerView.getAdapter().notifyItemChanged(idx); // notify list adapter
                         titleView.setText(newName); // update title
                     }
                 });
@@ -347,34 +389,35 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     // set power on/off for gear at gearPosition
-    private void setGearPower(int gearPosition, boolean on) {
-        byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)(on?100:0)};
+    private void setGearPower(byte gearId, boolean on) {
+        if (on) return; // no command to set power on...
+        byte[] data = {MESSAGE_TYPE_COMMAND, gearId, DALI_COMMAND_OFF, MESSAGE_END};
         sendData(data);
     }
     // set power level for gear at gearPosition
-    private void setGearPowerLevel(int gearPosition, int powerLevel) {
-        // TODO: remove this test and uncomment lines below
-        daliGears.get(gearPosition).setPower((byte)powerLevel);
-        gearFragment.setGearData(daliGears.get(gearPosition));
+    private void setGearPowerLevel(byte gearId, int powerLevel) {
 
-        //byte[] data = {daliGears.get(gearPosition).getId(), SET_POWER, (byte)powerLevel};
-        //sendData(data);
+        // probably should remove these two lines and find a better solution
+        gearMap.get(gearId).setPower((byte)powerLevel);
+        //gearFragment.setGear(gearMap.get(gearId));
+
+        byte[] data = {MESSAGE_TYPE_POWER, gearId, (byte)powerLevel, MESSAGE_END};
+        sendData(data);
     }
 
+    /* TODO: remove or edit
     // initialize gear list of <count> items with specified data
     private void initGearList(byte[][] data, int count) {
         daliGears.clear(); // clear gear list
+        recyclerListItems.clear(); // clear recycler list
         for (int i = 0; i < count; i++) {
             DaliGear gear = new DaliGear(data[i]);
             daliGears.add(gear);
         }
 
-        // not sure if these should be run on ui thread
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                // clear recycler list
-                recyclerListItems.clear();
                 recyclerView.getAdapter().notifyDataSetChanged();
                 // add gears to recycler list
                 for (DaliGear gear : daliGears) {
@@ -384,30 +427,31 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         });
     }
+    */
 
-    // updates gear, gear update message (including gear id) is given as a parameter
-    // if matching id isn't found in the gear list, new gear object is created
-    private boolean updateGear(byte[] bytes) {
-        byte id = bytes[1]; // bytes[0] == MESSAGE_UPDATE
-
-        DaliGear toUpdate = null;
-        for (DaliGear gear : daliGears) {
-            if (id == gear.getId()) {
-                toUpdate = gear;
-            }
+    // updates gears
+    // if matching id isn't found, new gear will be added
+    private int updateGears(byte[] bytes) {
+        int count = 0;
+        for (int i = 0; i < bytes.length; i += DaliGear.DATA_LEN) {
+            DaliGear toUpdate = (DaliGear)gearMap.get(bytes[i]);
+            if (toUpdate == null) {
+                Log.d(TAG, "New gear with id=" + (int)bytes[i]);
+                String gearName = "New gear [" + (int)bytes[i] + "]";
+                gearMap.put(bytes[i], new DaliGear(gearName, Arrays.copyOfRange(bytes, i, i+DaliGear.DATA_LEN)));
+                recyclerListItems.add(new RecyclerListItem(gearName, ITEM_ACTION_OPEN, bytes[i]));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        recyclerView.getAdapter().notifyDataSetChanged();
+                        //recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
+                    }
+                });
+            } else
+                toUpdate.setData(Arrays.copyOfRange(bytes, i, i+DaliGear.DATA_LEN));
+            count++;
         }
-        if (toUpdate == null) { // if matching id wasn't found
-            daliGears.add(new DaliGear(Arrays.copyOfRange(bytes, 1, DaliGear.DATA_LEN + 1)));
-            recyclerListItems.add(new RecyclerListItem("New Gear", ITEM_ACTION_OPEN));
-            recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
-            return true;
-        }
-
-        toUpdate.setData(Arrays.copyOfRange(bytes, 1, bytes.length));
-
-        Log.d(TAG, "Gear data updated:\n" + toUpdate.getInfoString());
-
-        return true;
+        return count;
     }
 
     // bluetooth
@@ -422,7 +466,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         Log.d(TAG, "Device found (" + device.getAddress() + ")");
 
         foundDevices.add(device);
-        recyclerListItems.add(new RecyclerListItem(device.getAddress(), ITEM_ACTION_CONNECT));
+        recyclerListItems.add(new RecyclerListItem(device.getName() != null ?
+                device.getName() : device.getAddress(), device.getAddress(), ITEM_ACTION_CONNECT));
 
 
         runOnUiThread(new Runnable() {
@@ -464,27 +509,23 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public void onConnected(){
         Log.d(TAG, "Device connected");
         connectedDevice = bleManager.getConnectedDevice();
-        deviceAddress = connectedDevice.getAddress();
+        if (connectedDevice != null)
+            deviceAddress = connectedDevice.getAddress();
+
+        gearMap.clear();
+        recyclerListItems.clear();
 
         // TODO: remove this test and get actual gear data from controller
-        daliGears.clear();
-        for (int i = 0; i < 20; i++){
-            DaliGear gear = new DaliGear("Dummy Gear #" + i, new byte[]{(byte)i, 0, 0});
-            daliGears.add(gear);
+        byte[] bytes = new byte[20*3]; // 20 gears
+        for (int i = 0; i < 20*3; i++) {
+            if (i%3 == 0) bytes[i] = (byte)(i/3); // id = i
+            else bytes[i] = (byte)(Math.random()*256); // random status and power
         }
-        recyclerListItems.clear();
+        updateGears(bytes);
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                // TODO: remove
-                recyclerView.getAdapter().notifyDataSetChanged();
-                for (DaliGear gear : daliGears) {
-                    recyclerListItems.add(new RecyclerListItem(gear.getName(), ITEM_ACTION_OPEN));
-                    recyclerView.getAdapter().notifyItemInserted(recyclerListItems.size() - 1);
-                }
-
-
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
             }
@@ -522,24 +563,38 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             if (characteristic.getUuid().toString().equalsIgnoreCase(UUID_RX)) {
                 final byte[] bytes = characteristic.getValue();
                 final String data = new String(bytes, Charset.forName("UTF-8"));
-
                 Log.d(TAG, "data received:\n" + data);
-
-                // testing simple protocol
-                if (bytes[0] == MESSAGE_INIT) {     // get gears
-                    int dataByteCount = 3; // may be changed
-                    int gearCount = (int)bytes[1];
-                    byte[][] gearData = new byte[gearCount][3];
-                    for (int i = 0; i < gearCount; i++) {
-                        for (int j = 0; j < dataByteCount; j++) {
-                            gearData[i][j] = bytes[2 + j + dataByteCount * i];
+                int startIndex = 0;
+                int endIndex;
+                int index = 0;
+                while (index < bytes.length) {
+                    if (bytes[index] == MESSAGE_END) {
+                        endIndex = index;
+                        if (currentMessage != null) {
+                            byte[] message = new byte[currentMessage.length + endIndex - startIndex];
+                            System.arraycopy(currentMessage, 0, message, 0, currentMessage.length);
+                            System.arraycopy(bytes, startIndex, message, currentMessage.length, endIndex-startIndex);
+                            parseMessage(message);
+                            currentMessage = null;
+                        } else {
+                            parseMessage(Arrays.copyOfRange(bytes, startIndex, endIndex));
                         }
+                        startIndex = endIndex+1;
                     }
-                    initGearList(gearData, gearCount);
-                } else if (bytes[0] == MESSAGE_UPDATE) {
-                    updateGear(bytes);
+                    index++;
                 }
-
+                if (startIndex < bytes.length) {
+                    if (currentMessage != null) {
+                        byte[] newCurrentMessage = new byte[bytes.length-startIndex + currentMessage.length];
+                        System.arraycopy(currentMessage, 0, newCurrentMessage, 0, currentMessage.length);
+                        System.arraycopy(bytes, startIndex, newCurrentMessage,
+                                currentMessage.length, bytes.length-startIndex);
+                        currentMessage = newCurrentMessage;
+                    } else {
+                        currentMessage = new byte[bytes.length-startIndex];
+                        System.arraycopy(bytes, startIndex, currentMessage, 0, bytes.length-startIndex);
+                    }
+                }
             }
         }
     }
@@ -619,19 +674,17 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     private void parseMessage(byte[] bytes) {
-        switch (bytes[0]) {
-            case MESSAGE_TYPE_COMMAND:
-                Log.d(TAG, "message: command");
-
+        switch (bytes[MESSAGE_IND_TYPE]) {
+            case MESSAGE_TYPE_GEAR_DATA:
+                Log.d(TAG, "message: gear data");
+                updateGears(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
-            case MESSAGE_TYPE_BROADCAST:
-                Log.d(TAG, "message: broadcast");
-                break;
-            case MESSAGE_TYPE_DATA_UPDATE:
-                updateGear(bytes);
+            case MESSAGE_TYPE_EXCEPTION:
+                Log.d(TAG, "message: exception");
+                // handle exception
                 break;
             default:
-                Log.d(TAG, "message: not recognized");
+                Log.d(TAG, "message: not recognized (" + (int)bytes[MESSAGE_IND_TYPE] + ")");
                 break;
         }
     }
@@ -640,5 +693,4 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void enableRxNotifications() {
         bleManager.enableNotification(uartService, UUID_RX, true);
     }
-
 }

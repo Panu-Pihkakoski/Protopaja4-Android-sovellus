@@ -44,7 +44,7 @@ public class GearFragment extends Fragment {
 
     private GearFragmentListener listener;
 
-    private int gearPosition;
+    private DaliGear gear;
 
     private int powerLevel, lastPowerLevel;
 
@@ -61,15 +61,16 @@ public class GearFragment extends Fragment {
     }
 
 
-    public static GearFragment newInstance(int gearPosition) {
-        return newInstance(gearPosition, null);
+    public static GearFragment newInstance(DaliGear gear) {
+        return newInstance(gear, null);
     }
 
-    public static GearFragment newInstance(int gearPosition, GearFragmentListener listener) {
+    public static GearFragment newInstance(DaliGear gear, GearFragmentListener listener) {
         GearFragment fragment = new GearFragment();
-        fragment.gearPosition = gearPosition;
+        fragment.gear = gear;
         fragment.listener = listener;
-        fragment.lastPowerLevel = fragment.powerLevel = 0;
+        fragment.lastPowerLevel = fragment.powerLevel = gear.getPowerInt();
+        fragment.infoText = gear.getInfoString();
         return fragment;
     }
 
@@ -150,7 +151,7 @@ public class GearFragment extends Fragment {
                 Log.d(TAG, "powerSwitch onCheckedChanged " + (b ? "ON":"OFF"));
                 powerSeekBar.setProgress(b ? Math.max(lastPowerLevel, 1) : 0);
                 //if (listener != null)
-                //    listener.onGearFragmentAction(ACTION_POWER, b ? 1 : 0, gearPosition);
+                //    listener.onGearFragmentAction(ACTION_POWER, b ? 1 : 0, gearId);
             }
         });
 
@@ -165,7 +166,7 @@ public class GearFragment extends Fragment {
                     lastPowerLevel = i;
                 } else powerSwitch.setChecked(false);
                 if (listener != null)
-                    listener.onGearFragmentAction(ACTION_POWER_LEVEL, i, gearPosition);
+                    listener.onGearFragmentAction(ACTION_POWER_LEVEL, i, gear.getId());
             }
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
@@ -187,9 +188,8 @@ public class GearFragment extends Fragment {
         infoText = text;
     }
 
-    public void setGearData(DaliGear gear) {
-        powerLevel = gear.getPower();
-        infoText = gear.getInfoString();
+    public void setGear(DaliGear _gear) {
+        gear = _gear;
     }
 
     private void toggleView() {
@@ -203,7 +203,7 @@ public class GearFragment extends Fragment {
 
     private void renameGear() {
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_RENAME, 0, gearPosition);
+            listener.onGearFragmentAction(ACTION_RENAME, 0, gear.getId());
     }
 
     public String getNewName() {
@@ -212,12 +212,12 @@ public class GearFragment extends Fragment {
 
     private void close() {
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_CLOSE, 0, 0);
+            listener.onGearFragmentAction(ACTION_CLOSE, 0, (byte)0);
         else
             getActivity().getFragmentManager().beginTransaction().remove(this).commit();
     }
 
     public interface GearFragmentListener {
-        void onGearFragmentAction(int which, int value, int gearPosition);
+        void onGearFragmentAction(int which, int value, byte gearId);
     }
 }

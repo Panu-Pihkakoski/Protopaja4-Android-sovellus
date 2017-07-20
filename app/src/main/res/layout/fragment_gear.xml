@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/gear_power_level_text"
                 android:padding="10dp"
-                android:max="100"
+                android:max="255"
                 android:minWidth="200dp"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentStart="true" />

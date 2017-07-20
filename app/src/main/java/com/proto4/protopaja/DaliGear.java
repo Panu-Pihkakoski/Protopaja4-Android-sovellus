@@ -16,7 +16,7 @@ public class DaliGear {
     private ArrayList<DaliGear> group;
 
 
-    private byte[] data;
+    private byte[] data; // should be {id, status, power}
 
     public static final int DATA_LEN = 3;
 
@@ -62,6 +62,12 @@ public class DaliGear {
     }
 
     public byte getPower() {
+        return data[DATA_POWER];
+    }
+
+    public int getPowerInt() {
+        if (data[DATA_POWER] < 0)
+            return 256+data[DATA_POWER];
         return data[DATA_POWER];
     }
 
@@ -123,7 +129,7 @@ public class DaliGear {
         Log.d(TAG, "getInfoString()");
         byte status = data[DATA_STATUS];
         String info = "";
-        info += "Power level = " + Byte.toString(data[DATA_POWER]) + "\n";
+        info += "Power level = " + getPowerInt() + "\n";
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";
