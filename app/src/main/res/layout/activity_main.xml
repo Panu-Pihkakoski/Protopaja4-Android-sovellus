@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/main_bg"
     tools:context="com.proto4.protopaja.MainActivity">
 
     <android.support.v7.widget.Toolbar
@@ -31,29 +32,18 @@
         android:id="@+id/main_title_view"
         android:layout_width="368dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:text="Title (main)"
-        android:background="#aaaacc"
+        android:textColor="@color/title_text"
+        android:background="@color/title_bg"
         app:layout_constraintTop_toBottomOf="@+id/main_toolbar"
         tools:layout_editor_absoluteX="8dp" />
-
-    <!--
-    <ListView
-        android:id="@+id/main_list_view"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_below="@id/main_title_view"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_title_view"
-        android:layout_marginBottom="40dp"/>
-    -->
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/main_recycler_view"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="0dp"
         android:layout_below="@id/main_title_view"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

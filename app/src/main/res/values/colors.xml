@@ -6,6 +6,9 @@
     <color name="unitItem">#50a050</color>
     <color name="groupItem">#5050f0</color>
     <color name="infoItem">#505050</color>
-    <color name="title_text">#80c080</color>
-    <color name="title_bg">#c0c0c0</color>
+    <color name="list_item_title_text">#8080c0</color>
+    <color name="list_item_title_bg">#c0c0c0</color>
+    <color name="title_bg">#4040a0</color>
+    <color name="title_text">#40a040</color>
+    <color name="main_bg">#a0a0c0</color>
 </resources>
