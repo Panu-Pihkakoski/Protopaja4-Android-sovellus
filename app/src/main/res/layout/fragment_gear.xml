@@ -96,13 +96,19 @@
                 android:text="Power level"
                 android:background="#aaaaaa"/>
 
+            <TextView
+                android:id="@+id/gear_power_level_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:layout_toEndOf="@id/gear_power_level_text" />
+
             <SeekBar
                 android:id="@+id/gear_power_seekBar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/gear_power_level_text"
                 android:padding="10dp"
-                android:max="255"
                 android:minWidth="200dp"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentStart="true" />

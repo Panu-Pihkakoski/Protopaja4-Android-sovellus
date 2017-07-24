@@ -33,6 +33,7 @@ public class GearFragment extends Fragment {
     private String infoText;
     private boolean showInfo;
 
+    private TextView powerPercentageText;
 
     private Switch powerSwitch;
     private SeekBar powerSeekBar;
@@ -55,6 +56,8 @@ public class GearFragment extends Fragment {
     public static final int ACTION_CLOSE = 4;
     public static final int ACTION_RENAME = 5;
 
+
+    private static final int POWER_MAX = 254;
 
     public GearFragment() {
         // Required empty public constructor
@@ -132,6 +135,8 @@ public class GearFragment extends Fragment {
         editText.setVisibility(View.GONE);
 
         controlView  = activity.findViewById(R.id.gear_control_view);
+        powerPercentageText = activity.findViewById(R.id.gear_power_level_percent);
+        powerPercentageText.setText(getPowerPercentage() + "%");
         initControls(activity);
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);
@@ -156,10 +161,12 @@ public class GearFragment extends Fragment {
         });
 
         powerSeekBar = activity.findViewById(R.id.gear_power_seekBar);
+        powerSeekBar.setMax(POWER_MAX);
         powerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 Log.d(TAG, "powerSeekBar onProgressChanged " + i);
+                powerPercentageText.setText(getPowerPercentage(i) + "%");
                 if (i > 0) {
                     if (!powerSwitch.isChecked())
                         powerSwitch.setChecked(true);
@@ -180,6 +187,14 @@ public class GearFragment extends Fragment {
         powerSeekBar.setProgress(powerLevel);
     }
 
+    public int getPowerPercentage() {
+        return (int)(powerLevel != 0 ? (float)powerLevel/POWER_MAX*100 : 0);
+    }
+
+    public int getPowerPercentage(int power) {
+        return (int)(power != 0 ? (float)power/POWER_MAX*100 : 0);
+    }
+
     public void setListener(GearFragmentListener _listener) {
         listener = _listener;
     }
@@ -190,6 +205,8 @@ public class GearFragment extends Fragment {
 
     public void setGear(DaliGear _gear) {
         gear = _gear;
+        powerLevel = gear.getPowerInt();
+        infoText = gear.getInfoString();
     }
 
     private void toggleView() {

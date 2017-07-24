@@ -398,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void setGearPowerLevel(byte gearId, int powerLevel) {
 
         // probably should remove these two lines and find a better solution
-        gearMap.get(gearId).setPower((byte)powerLevel);
+        //gearMap.get(gearId).setPower((byte)powerLevel);
         //gearFragment.setGear(gearMap.get(gearId));
 
         byte[] data = {MESSAGE_TYPE_POWER, gearId, (byte)powerLevel, MESSAGE_END};
