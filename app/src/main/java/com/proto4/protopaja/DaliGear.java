@@ -45,7 +45,9 @@ public class DaliGear {
 
     public DaliGear(String _name, byte[] _data) {
         name = _name;
-        data = _data;
+        data = new byte[DATA_LEN];
+        for (int i = 0; i < DATA_LEN; i++)
+            data[i] = i < _data.length ? _data[i] : 0;
     }
 
     // gets
@@ -77,7 +79,8 @@ public class DaliGear {
 
     // sets
     public void setData(byte[] _data) {
-        data = _data;
+        for (int i = 0; i < DATA_LEN; i++)
+            data[i] = i < _data.length ? _data[i] : 0;
     }
 
     public void setId(byte _id) {

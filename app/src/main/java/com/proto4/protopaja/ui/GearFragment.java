@@ -121,6 +121,7 @@ public class GearFragment extends Fragment {
                     toggleViewButton.setVisibility(View.GONE);
                     backButton.setVisibility(View.GONE);
                     editText.setVisibility(View.VISIBLE);
+                    editText.requestFocus();
                 } else {
                     Log.d(TAG, "renaming gear...");
                     renameGear();

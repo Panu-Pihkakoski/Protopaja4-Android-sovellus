@@ -6,5 +6,8 @@
         android:title="@string/action_scan"
         app:showAsAction="never"/>
 
+    <item android:id="@+id/action_query"
+        android:title="status query"
+        app:showAsAction="never"/>
 
 </menu>
