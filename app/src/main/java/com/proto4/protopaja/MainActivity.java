@@ -655,8 +655,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void connect(String address){
         Log.d(TAG, "Connecting to " + address);
-        //onConnected(); // skip actual connection
-        bleManager.connect(this, address);
+        onConnected(); // skip actual connection
+        //bleManager.connect(this, address);
     }
 
     private void connect(BluetoothDevice device){

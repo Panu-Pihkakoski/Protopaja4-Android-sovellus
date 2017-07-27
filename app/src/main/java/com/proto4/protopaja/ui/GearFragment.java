@@ -20,7 +20,7 @@ import com.proto4.protopaja.DaliGear;
 import com.proto4.protopaja.R;
 
 
-public class GearFragment extends Fragment {
+public class GearFragment extends Fragment implements PowerSlider.Listener {
 
     private static final String TAG = GearFragment.class.getSimpleName();
 
@@ -33,15 +33,7 @@ public class GearFragment extends Fragment {
     private String infoText;
     private boolean showInfo;
 
-    private TextView powerPercentageText;
-
-    private Switch powerSwitch;
-    private SeekBar powerSeekBar;
-
-    // TODO: remove or add to layout and implement
-    private Button stepUpButton;
-    private Button stepDownButton;
-
+    private PowerSlider powerSlider;
 
     private GearFragmentListener listener;
 
@@ -136,9 +128,9 @@ public class GearFragment extends Fragment {
         editText.setVisibility(View.GONE);
 
         controlView  = activity.findViewById(R.id.gear_control_view);
-        powerPercentageText = activity.findViewById(R.id.gear_power_level_percent);
-        powerPercentageText.setText(getPowerPercentage() + "%");
-        initControls(activity);
+        powerSlider = activity.findViewById(R.id.power_slider);
+        powerSlider.setListener(this);
+
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);
         if (infoText != null)
@@ -148,65 +140,19 @@ public class GearFragment extends Fragment {
         toggleView();
     }
 
-    private void initControls(Activity activity) {
-
-        powerSwitch = activity.findViewById(R.id.gear_power_switch);
-        powerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                Log.d(TAG, "powerSwitch onCheckedChanged " + (b ? "ON":"OFF"));
-                powerSeekBar.setProgress(b ? Math.max(lastPowerLevel, 1) : 0);
-                //if (listener != null)
-                //    listener.onGearFragmentAction(ACTION_POWER, b ? 1 : 0, gearId);
-            }
-        });
-
-        powerSeekBar = activity.findViewById(R.id.gear_power_seekBar);
-        powerSeekBar.setMax(POWER_MAX);
-        powerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                Log.d(TAG, "powerSeekBar onProgressChanged " + i);
-                powerPercentageText.setText(getPowerPercentage(i) + "%");
-                if (i > 0) {
-                    if (!powerSwitch.isChecked())
-                        powerSwitch.setChecked(true);
-                    lastPowerLevel = i;
-                } else powerSwitch.setChecked(false);
-                if (listener != null)
-                    listener.onGearFragmentAction(ACTION_POWER_LEVEL, i, gear.getId());
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-        powerSeekBar.setProgress(powerLevel);
+    @Override
+    public void onPowerSet(int power) {
+        Log.d(TAG, "power set: " + power);
+        powerLevel = power;
+        if (listener != null)
+            listener.onGearFragmentAction(ACTION_POWER_LEVEL, powerLevel, gear.getId());
     }
 
-    public int getPowerPercentage() {
-        return (int)(powerLevel != 0 ? (float)powerLevel/POWER_MAX*100 : 0);
-    }
-
-    public int getPowerPercentage(int power) {
-        return (int)(power != 0 ? (float)power/POWER_MAX*100 : 0);
-    }
-
-    public void setListener(GearFragmentListener _listener) {
-        listener = _listener;
-    }
-
-    public void setInfoText(String text) {
-        infoText = text;
-    }
 
     public void setGear(DaliGear _gear) {
         gear = _gear;
         powerLevel = gear.getPowerInt();
+        powerSlider.setPower(powerLevel);
         infoText = gear.getInfoString();
     }
 
