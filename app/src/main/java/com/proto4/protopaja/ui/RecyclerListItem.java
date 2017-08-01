@@ -4,27 +4,35 @@ package com.proto4.protopaja.ui;
 public class RecyclerListItem {
 
     private String title, extra;
-    private int action;
     private byte id;
+    private boolean isChecked, showCheckBox;
 
+    private int type;
 
-    public RecyclerListItem(String _title, int _action) {
-        this(_title, "", _action, (byte)0);
+    public static final int TYPE_BT_DEVICE = 0;
+    public static final int TYPE_GEAR = 1;
+    public static final int TYPE_GROUP = 2;
+
+    public RecyclerListItem(String _title, int _type) {
+        this(_title, "", _type, (byte)0);
     }
 
-    public RecyclerListItem(String _title, int _action, byte _id) {
-        this(_title, "", _action, _id);
+    public RecyclerListItem(String _title, int _type, byte _id) {
+        this(_title, "", _type, _id);
     }
 
-    public RecyclerListItem(String _title, String _extra, int _action) {
-        this(_title, _extra, _action, (byte)0);
+    public RecyclerListItem(String _title, String _extra, int _type) {
+        this(_title, _extra, _type, (byte)0);
     }
 
-    public RecyclerListItem(String _title, String _extra, int _action, byte _id) {
+    public RecyclerListItem(String _title, String _extra, int _type, byte _id) {
         title = _title;
         extra = _extra;
-        action = _action;
+        type = _type;
         id = _id;
+
+        isChecked = false;
+        showCheckBox = false;
     }
 
     public String getTitle() {
@@ -35,12 +43,20 @@ public class RecyclerListItem {
         return extra;
     }
 
-    public int getAction() {
-        return action;
+    public int getType() {
+        return type;
     }
 
     public byte getId() {
         return id;
+    }
+
+    public boolean isChecked() {
+        return isChecked;
+    }
+
+    public boolean showCheckBox() {
+        return showCheckBox;
     }
 
     public void setTitle(String _title) {
@@ -51,11 +67,19 @@ public class RecyclerListItem {
         extra = _extra;
     }
 
-    public void setAction(int _action) {
-        action = _action;
+    public void setType(int _type) {
+        type = _type;
     }
 
     public void setId(byte _id) {
         id = _id;
+    }
+
+    public void showCheckBox(boolean show) {
+        showCheckBox = show;
+    }
+
+    public void setChecked(boolean checked) {
+        isChecked = checked;
     }
 }

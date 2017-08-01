@@ -10,4 +10,8 @@
         android:title="status query"
         app:showAsAction="never"/>
 
+    <item android:id="@+id/action_create_group"
+        android:title="@string/action_create_group"
+        app:showAsAction="never" />
+
 </menu>

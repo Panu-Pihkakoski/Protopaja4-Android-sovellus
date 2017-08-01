@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -32,10 +33,14 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         public TextView title;
+        public CheckBox checkBox;
 
         public ViewHolder(View view) {
             super(view);
             title = (TextView) view.findViewById(R.id.list_row_title);
+            checkBox = (CheckBox) view.findViewById(R.id.list_item_checkbox);
+            checkBox.setChecked(false);
+            checkBox.setVisibility(View.GONE);
         }
     }
 
@@ -55,6 +60,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     public void onBindViewHolder(ViewHolder holder, int position) {
         RecyclerListItem item  = listItems.get(position);
         holder.title.setText(item.getTitle());
+        holder.checkBox.setVisibility(item.showCheckBox() ? View.VISIBLE : View.GONE);
+        holder.checkBox.setChecked(item.isChecked());
         if (position == listItems.size() - 1) {
             Log.d(TAG, "set last params " + item.getTitle());
             holder.itemView.setLayoutParams(lastLayoutParams);

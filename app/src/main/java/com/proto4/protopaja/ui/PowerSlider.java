@@ -2,6 +2,7 @@ package com.proto4.protopaja.ui;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
@@ -21,11 +22,15 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
     private Listener listener;
     private int width, height;
 
+    private int backgroundColor;
+
     private float power;
 
     private float[] lastDown;
 
     private Slider slider;
+
+    private float minPower, maxPower;
 
     private static final float MAX_POWER = 254;
     private static final float POWER_ARC_START = -180;
@@ -47,16 +52,32 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
     private void init(Context context) {
         width = height = 0;
         power = 0;
+        minPower = 0;
+        maxPower = 254;
         lastDown = new float[]{0,0};
         holder = getHolder();
         holder.addCallback(this);
-
+        backgroundColor = 0xffa0a0b0;
         Log.d(TAG, "Surface initialized");
     }
 
     public void setPower(int _power) {
         power = _power;
         renderContents();
+    }
+
+    public void setMinPower(int _minPower) {
+        Log.d(TAG, "minPower set: " + _minPower);
+        minPower = _minPower;
+        if (power < minPower)
+            power = minPower;
+    }
+
+    public void setMaxPower(int _maxPower) {
+        Log.d(TAG, "maxPower set: " + _maxPower);
+        maxPower = _maxPower;
+        if (power > maxPower)
+            power = maxPower;
     }
 
     public void setListener(Listener _listener) {
@@ -81,8 +102,7 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     @Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b)
-    {
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
         Log.d(TAG, "onLayout");
         width = r-l; height = b-t;
         float radius = Math.min(width/2, height);
@@ -103,16 +123,16 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
         float y = e.getY();
         if (e.getAction() == MotionEvent.ACTION_DOWN) {
             lastDown[0] = x; lastDown[1] = y;
-        } else if (e.getAction() == MotionEvent.ACTION_UP) {
+        } else if (e.getAction() == MotionEvent.ACTION_UP) {        // set power and notify listener
             if (lastDown[0] == x && lastDown[1] == y) { // click
                 Log.d(TAG, "click: x=" + x + " y=" + y);
                 float rad = (float)Math.atan2(y-slider.posy, x - slider.posx);
-                if (rad > -Math.PI && rad < -Math.PI/3*2)
-                    power = 0;
-                else if (rad > -Math.PI/3*2 && rad < -Math.PI/3)
-                    power = MAX_POWER/2;
-                else if (rad < 0)
-                    power = MAX_POWER;
+                if (rad > -Math.PI && rad < -Math.PI/3*2)           // power to min
+                    power = minPower;
+                else if (rad > -Math.PI/3*2 && rad < -Math.PI/3)    // power to half
+                    power = (maxPower-minPower)/2 + minPower;
+                else if (rad < 0)                                   // power to max
+                    power = maxPower;
             }
             Log.d(TAG, "power to listener...");
             if (listener != null)
@@ -120,11 +140,11 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
         } else {
             float rad = (float)Math.atan2(y-slider.posy, x - slider.posx);
             if (rad > -Math.PI && rad < 0)
-                power = (float)(1+rad/Math.PI)*MAX_POWER;
+                power = (float)(1+rad/Math.PI)*(maxPower-minPower) + minPower;
             else if (rad > Math.PI/2)
-                power = 0;
+                power = minPower;
             else
-                power = MAX_POWER;
+                power = maxPower;
         }
 
         renderContents();
@@ -163,7 +183,10 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         void draw(Canvas canvas) {
-            int br = (int)(255*power/MAX_POWER);
+
+            canvas.drawColor(backgroundColor);
+
+            int br = (int)(255*(power-minPower)/(maxPower-minPower));
             int color = (0xff << 24) + (br << 16) + (br << 8) + br;
             halfCirclePaint.setColor(color);
 
@@ -174,11 +197,11 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
             canvas.drawArc(rectArc, POWER_ARC_START, getArcEnd(), false, powerArcPaint);
 
             // draw power percentage
-            canvas.drawText((int)(power/MAX_POWER*100) + "%", posx, posy, percentagePaint);
+            canvas.drawText((int)((power-minPower)/(maxPower-minPower)*100) + "%", posx, posy, percentagePaint);
         }
 
         float getArcEnd() {
-            return (int)(power != 0 ? power/MAX_POWER * 180: 0);
+            return (int)(power != 0 ? (power-minPower)/(maxPower-minPower) * 180: 0);
         }
     }
 

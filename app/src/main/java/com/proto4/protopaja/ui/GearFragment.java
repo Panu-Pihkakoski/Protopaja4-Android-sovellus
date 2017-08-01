@@ -39,7 +39,7 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
 
     private DaliGear gear;
 
-    private int powerLevel, lastPowerLevel;
+    private int powerLevel, lastPowerLevel, minPower, maxPower;
 
     public static final int ACTION_POWER = 0;
     public static final int ACTION_POWER_LEVEL = 1;
@@ -48,8 +48,6 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
     public static final int ACTION_CLOSE = 4;
     public static final int ACTION_RENAME = 5;
 
-
-    private static final int POWER_MAX = 254;
 
     public GearFragment() {
         // Required empty public constructor
@@ -65,6 +63,8 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
         fragment.gear = gear;
         fragment.listener = listener;
         fragment.lastPowerLevel = fragment.powerLevel = gear.getPowerInt();
+        fragment.minPower = gear.getMinPowerInt();
+        fragment.maxPower = gear.getMaxPowerInt();
         fragment.infoText = gear.getInfoString();
         return fragment;
     }
@@ -130,6 +130,8 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
         controlView  = activity.findViewById(R.id.gear_control_view);
         powerSlider = activity.findViewById(R.id.power_slider);
         powerSlider.setListener(this);
+        powerSlider.setMinPower(gear.getMinPowerInt());
+        powerSlider.setMaxPower(gear.getMaxPowerInt());
 
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);

@@ -39,6 +39,7 @@
         app:layout_constraintTop_toBottomOf="@+id/main_toolbar"
         tools:layout_editor_absoluteX="8dp" />
 
+    <!--
     <android.support.v7.widget.RecyclerView
         android:id="@+id/main_recycler_view"
         android:layout_width="0dp"
@@ -50,6 +51,7 @@
         app:layout_constraintTop_toBottomOf="@id/main_title_view">
 
     </android.support.v7.widget.RecyclerView>
+    -->
 
     <FrameLayout
         android:id="@+id/main_fragment_content"

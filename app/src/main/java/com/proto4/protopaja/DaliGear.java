@@ -15,14 +15,15 @@ public class DaliGear {
     private String name;
     private ArrayList<DaliGear> group;
 
-
     private byte[] data; // should be {id, status, power}
 
-    public static final int DATA_LEN = 3;
+    public static final int DATA_LEN = 5;
 
     public static final int DATA_ID = 0;
     public static final int DATA_STATUS = 1;
     public static final int DATA_POWER = 2;
+    public static final int DATA_MIN_POWER = 3;
+    public static final int DATA_MAX_POWER = 4;
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;
@@ -46,8 +47,13 @@ public class DaliGear {
     public DaliGear(String _name, byte[] _data) {
         name = _name;
         data = new byte[DATA_LEN];
+
         for (int i = 0; i < DATA_LEN; i++)
             data[i] = i < _data.length ? _data[i] : 0;
+        if (data[DATA_MIN_POWER] == 0)
+            data[DATA_MIN_POWER] = 80;
+        if (data[DATA_MAX_POWER] == 0)
+            data[DATA_MAX_POWER] = (byte)254;
     }
 
     // gets
@@ -71,6 +77,18 @@ public class DaliGear {
         if (data[DATA_POWER] < 0)
             return 256+data[DATA_POWER];
         return data[DATA_POWER];
+    }
+
+    public int getMinPowerInt() {
+        if (data[DATA_MIN_POWER] < 0)
+            return 256+data[DATA_MIN_POWER];
+        return data[DATA_MIN_POWER];
+    }
+
+    public int getMaxPowerInt() {
+        if (data[DATA_MAX_POWER] < 0)
+            return 256+data[DATA_MAX_POWER];
+        return data[DATA_MAX_POWER];
     }
 
     public String getName(){
@@ -97,6 +115,14 @@ public class DaliGear {
             data[DATA_STATUS] |= STATUS_POWER_ON;
         else if (power == 0)
             data[DATA_STATUS] = (byte)(data[DATA_STATUS] & (0xff ^ STATUS_POWER_ON));
+    }
+
+    public void setMinPower(byte minPower) {
+        data[DATA_MIN_POWER] = minPower;
+    }
+
+    public void setMaxPower(byte maxPower) {
+        data[DATA_MAX_POWER] = maxPower;
     }
 
     public void setName(String _name){
