@@ -60,6 +60,23 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     public void onBindViewHolder(ViewHolder holder, int position) {
         RecyclerListItem item  = listItems.get(position);
         holder.title.setText(item.getTitle());
+        int colorId;
+        switch (item.getType()) {
+            case RecyclerListItem.TYPE_BT_DEVICE:
+                colorId = R.color.title_bt_device;
+                break;
+            case RecyclerListItem.TYPE_GEAR:
+                colorId = R.color.title_gear;
+                break;
+            case RecyclerListItem.TYPE_GROUP:
+                colorId = R.color.title_group;
+                break;
+            default:
+                colorId = R.color.title_default;
+                break;
+        }
+        int titleColor = context.getResources().getColor(colorId, null);
+        holder.title.setTextColor(titleColor);
         holder.checkBox.setVisibility(item.showCheckBox() ? View.VISIBLE : View.GONE);
         holder.checkBox.setChecked(item.isChecked());
         if (position == listItems.size() - 1) {

@@ -11,4 +11,8 @@
     <color name="title_bg">#4040a0</color>
     <color name="title_text">#40a040</color>
     <color name="main_bg">#a0a0b0</color>
+    <color name="title_bt_device">#0000f0</color>
+    <color name="title_gear">#00f000</color>
+    <color name="title_group">#f00000</color>
+    <color name="title_default">#0f0f0f</color>
 </resources>
