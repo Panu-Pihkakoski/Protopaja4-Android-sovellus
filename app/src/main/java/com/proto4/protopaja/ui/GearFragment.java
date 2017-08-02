@@ -132,6 +132,7 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
         powerSlider.setListener(this);
         powerSlider.setMinPower(gear.getMinPowerInt());
         powerSlider.setMaxPower(gear.getMaxPowerInt());
+        powerSlider.setPower(gear.getPowerInt());
 
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);

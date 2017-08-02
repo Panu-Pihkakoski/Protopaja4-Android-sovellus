@@ -12,6 +12,7 @@
 
     <string name="no_devices">No Devices</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="brightness_icon_desc">Brightness</string>
+    <string name="temp_icon_desc">Temperature</string>
+
 </resources>

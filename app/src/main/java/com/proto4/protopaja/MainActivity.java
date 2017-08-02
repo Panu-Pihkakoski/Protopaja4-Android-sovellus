@@ -350,6 +350,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 //if (value == 0) broadcastPowerOff();
                 break;
             case GearFragment.ACTION_POWER_LEVEL: // set gear power level
+                DaliGear g = gearMap.get(gearId);
+                if (g != null) {
+                    g.setPower((byte)value);
+                    float br = (float)(value-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*256;
+                    listFragment.getItemById(gearId).setBrightness((int)br);
+                }
+
                 if (value == 0) setGearPower(gearId, false);
                 else setGearPowerLevel(gearId, value);
                 break;

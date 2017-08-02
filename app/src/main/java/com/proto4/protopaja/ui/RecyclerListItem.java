@@ -1,13 +1,17 @@
 package com.proto4.protopaja.ui;
 
 
+import android.util.Log;
+
 public class RecyclerListItem {
+
+    private static final String TAG = RecyclerListItem.class.getSimpleName();
 
     private String title, extra;
     private byte id;
-    private boolean isChecked, showCheckBox;
+    private boolean isChecked, showCheckBox, showTemperature;
 
-    private int type;
+    private int type, brightness;
 
     public static final int TYPE_BT_DEVICE = 0;
     public static final int TYPE_GEAR = 1;
@@ -33,6 +37,12 @@ public class RecyclerListItem {
 
         isChecked = false;
         showCheckBox = false;
+        showTemperature = false;
+        brightness = 0;
+    }
+
+    public int getBrightnessColor() {
+        return (0xff << 24) + (brightness << 16) + (brightness << 8) + brightness;
     }
 
     public String getTitle() {
@@ -59,6 +69,15 @@ public class RecyclerListItem {
         return showCheckBox;
     }
 
+    public boolean showTempIcon() {
+        return showTemperature;
+    }
+
+    public void setBrightness(int _brightness) {
+        brightness = _brightness;
+        Log.d(TAG, "brightness=" + brightness);
+    }
+
     public void setTitle(String _title) {
         title = _title;
     }
@@ -77,6 +96,10 @@ public class RecyclerListItem {
 
     public void showCheckBox(boolean show) {
         showCheckBox = show;
+    }
+
+    public void showTempIcon(boolean show) {
+        showTemperature = show;
     }
 
     public void setChecked(boolean checked) {

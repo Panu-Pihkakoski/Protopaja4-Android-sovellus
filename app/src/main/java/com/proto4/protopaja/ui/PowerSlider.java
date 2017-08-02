@@ -63,7 +63,6 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     public void setPower(int _power) {
         power = _power;
-        renderContents();
     }
 
     public void setMinPower(int _minPower) {

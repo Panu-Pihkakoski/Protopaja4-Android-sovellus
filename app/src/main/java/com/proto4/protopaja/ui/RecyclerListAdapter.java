@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -34,6 +35,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     public class ViewHolder extends RecyclerView.ViewHolder {
         public TextView title;
         public CheckBox checkBox;
+        public ImageView tempIcon, brIcon;
 
         public ViewHolder(View view) {
             super(view);
@@ -41,6 +43,11 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             checkBox = (CheckBox) view.findViewById(R.id.list_item_checkbox);
             checkBox.setChecked(false);
             checkBox.setVisibility(View.GONE);
+            tempIcon = view.findViewById(R.id.list_item_temp_icon);
+            tempIcon.setVisibility(View.GONE);
+            brIcon = view.findViewById(R.id.list_item_brightness_icon);
+            brIcon.setVisibility(View.GONE);
+            brIcon.setColorFilter(0xffa0a0f0);
         }
     }
 
@@ -77,8 +84,15 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         }
         int titleColor = context.getResources().getColor(colorId, null);
         holder.title.setTextColor(titleColor);
-        holder.checkBox.setVisibility(item.showCheckBox() ? View.VISIBLE : View.GONE);
-        holder.checkBox.setChecked(item.isChecked());
+        if (item.getType() == RecyclerListItem.TYPE_GEAR) {
+            holder.checkBox.setVisibility(item.showCheckBox() ? View.VISIBLE : View.GONE);
+            holder.checkBox.setChecked(item.isChecked());
+            holder.tempIcon.setVisibility(item.showCheckBox() ? View.GONE : item.showTempIcon() ? View.VISIBLE : View.GONE);
+            holder.brIcon.setVisibility(item.showCheckBox() ? View.GONE : View.VISIBLE);
+            holder.brIcon.setColorFilter(item.getBrightnessColor());
+            Log.d(TAG, "brightness=" + item.getBrightnessColor());
+        }
+
         if (position == listItems.size() - 1) {
             Log.d(TAG, "set last params " + item.getTitle());
             holder.itemView.setLayoutParams(lastLayoutParams);

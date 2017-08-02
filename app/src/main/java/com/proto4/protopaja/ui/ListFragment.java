@@ -101,6 +101,14 @@ public class ListFragment extends Fragment {
         }
     }
 
+    public RecyclerListItem getItemById(byte id) {
+        for (RecyclerListItem item : listItems) {
+            if (item.getId() == id)
+                return item;
+        }
+        return null;
+    }
+
     public ArrayList<RecyclerListItem> getSelectedItems() {
         Log.d(TAG, "getSelectedItems() returning " + selectedItems.size() + " items");
         return selectedItems;
@@ -187,7 +195,10 @@ public class ListFragment extends Fragment {
             @Override
             public void onItemClicked(final RecyclerView recyclerView, final int position, View v) {
                 Log.d(TAG, "on list item clicked");
-
+                if (position < 0 || position > listItems.size()) {
+                    Log.w(TAG, "list index out of bounds (" + position + ")");
+                    return;
+                }
                 final RecyclerListItem item = listItems.get(position);
                 if (isSelecting) {
                     if (item.getType() == RecyclerListItem.TYPE_GEAR)

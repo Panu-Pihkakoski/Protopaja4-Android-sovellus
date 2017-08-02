@@ -110,6 +110,7 @@ public class DaliGear {
     }
 
     public void setPower(byte power) {
+        Log.d(TAG, "power=" + power);
         data[DATA_POWER] = power;
         if (power > 0 && (data[DATA_STATUS] & STATUS_POWER_ON) == 0)
             data[DATA_STATUS] |= STATUS_POWER_ON;
