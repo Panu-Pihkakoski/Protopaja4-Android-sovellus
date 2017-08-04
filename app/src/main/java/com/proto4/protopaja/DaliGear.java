@@ -17,13 +17,17 @@ public class DaliGear {
 
     private byte[] data; // should be {id, status, power}
 
-    public static final int DATA_LEN = 5;
+    public static final int DATA_LEN = 9;
 
     public static final int DATA_ID = 0;
     public static final int DATA_STATUS = 1;
     public static final int DATA_POWER = 2;
-    public static final int DATA_MIN_POWER = 3;
-    public static final int DATA_MAX_POWER = 4;
+    public static final int DATA_POWER_MIN = 3;
+    public static final int DATA_POWER_MAX = 4;
+    public static final int DATA_COLOR_TEMP_CAP = 5;
+    public static final int DATA_COLOR_TEMP = 6;
+    public static final int DATA_COLOR_COOLEST = 7;
+    public static final int DATA_COLOR_WARMEST = 8;
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;
@@ -35,6 +39,9 @@ public class DaliGear {
     public static final int STATUS_POWER_FAILURE = 128;
 
 
+    private static final byte DEFAULT_POWER_MIN = 0;
+    private static final byte DEFAULT_POWER_MAX = (byte)254;
+
 
     public DaliGear(byte[] _data) {
         this("unknown", _data);
@@ -44,21 +51,36 @@ public class DaliGear {
         this(_name, new byte[]{0, 0, 0});
     }
 
+    public DaliGear(String _name, byte _id) {
+        this(_name, new byte[]{_id, 0, 0});
+    }
+
     public DaliGear(String _name, byte[] _data) {
         name = _name;
         data = new byte[DATA_LEN];
 
         for (int i = 0; i < DATA_LEN; i++)
             data[i] = i < _data.length ? _data[i] : 0;
-        if (data[DATA_MIN_POWER] == 0)
-            data[DATA_MIN_POWER] = 80;
-        if (data[DATA_MAX_POWER] == 0)
-            data[DATA_MAX_POWER] = (byte)254;
+        if (data[DATA_POWER_MIN] == 0)
+            data[DATA_POWER_MIN] = DEFAULT_POWER_MIN;
+        if (data[DATA_POWER_MAX] == 0)
+            data[DATA_POWER_MAX] = DEFAULT_POWER_MAX;
     }
 
     // gets
     public byte[] getData() {
         return data;
+    }
+
+    public byte getDataByte(int index) {
+        if (index < 0 || index >= DATA_LEN)
+            return -1;
+        return data[index];
+    }
+
+    public int getDataByteInt(int index) {
+        byte b = getDataByte(index);
+        return (b < 0) ? 256+b : b;
     }
 
     public byte getId() {
@@ -74,21 +96,15 @@ public class DaliGear {
     }
 
     public int getPowerInt() {
-        if (data[DATA_POWER] < 0)
-            return 256+data[DATA_POWER];
-        return data[DATA_POWER];
+        return (data[DATA_POWER] < 0) ? 256+data[DATA_POWER] : data[DATA_POWER];
     }
 
     public int getMinPowerInt() {
-        if (data[DATA_MIN_POWER] < 0)
-            return 256+data[DATA_MIN_POWER];
-        return data[DATA_MIN_POWER];
+        return (data[DATA_POWER_MIN] < 0) ? 256+data[DATA_POWER_MIN] : data[DATA_POWER_MIN];
     }
 
     public int getMaxPowerInt() {
-        if (data[DATA_MAX_POWER] < 0)
-            return 256+data[DATA_MAX_POWER];
-        return data[DATA_MAX_POWER];
+        return (data[DATA_POWER_MAX] < 0) ? 256+data[DATA_POWER_MAX] : data[DATA_POWER_MAX];
     }
 
     public String getName(){
@@ -99,6 +115,12 @@ public class DaliGear {
     public void setData(byte[] _data) {
         for (int i = 0; i < DATA_LEN; i++)
             data[i] = i < _data.length ? _data[i] : 0;
+    }
+
+    public void setDataByte(int index, byte value) {
+        if (index < 0 || index >= DATA_LEN)
+            return;
+        data[index] = value;
     }
 
     public void setId(byte _id) {
@@ -119,19 +141,38 @@ public class DaliGear {
     }
 
     public void setMinPower(byte minPower) {
-        data[DATA_MIN_POWER] = minPower;
+        data[DATA_POWER_MIN] = minPower;
     }
 
     public void setMaxPower(byte maxPower) {
-        data[DATA_MAX_POWER] = maxPower;
+        data[DATA_POWER_MAX] = maxPower;
     }
 
     public void setName(String _name){
         name = _name;
     }
 
+    public void setConstants(byte[] bytes) {
+        if (bytes.length < 5) {
+            Log.w(TAG, "setConstants() invalid constant array");
+            return;
+        }
+        data[DATA_POWER_MIN] = bytes[0];
+        data[DATA_POWER_MAX] = bytes[1];
+        data[DATA_COLOR_TEMP_CAP] = bytes[2];
+        data[DATA_COLOR_COOLEST] = bytes[3];
+        data[DATA_COLOR_WARMEST] = bytes[4];
+    }
 
-    // TODO: remove or put to use
+    public void update(byte[] bytes) {
+        if (bytes.length < 3) {
+            Log.w(TAG, "update(): invalid update array");
+        }
+        data[DATA_STATUS] = bytes[0];
+        data[DATA_POWER] = bytes[1];
+        data[DATA_COLOR_TEMP] = bytes[2];
+    }
+
     public boolean isGroup(){
         return group != null;
     }

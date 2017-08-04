@@ -2,7 +2,6 @@ package com.proto4.protopaja.ui;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
@@ -12,11 +11,13 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 /**
- * Created by user on 27.07.17.
+ * Created by user on 4.08.17.
  */
 
-public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
-    private static final String TAG = PowerSlider.class.getSimpleName();
+public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
+
+    private static final String TAG = RoundSlider.class.getSimpleName();
+
 
     private SurfaceHolder holder;
     private Listener listener;
@@ -24,59 +25,77 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private int backgroundColor;
 
-    private float power;
+    private float value, minValue, maxValue;
+
+    private boolean showPercentage, showValue, flipped;
 
     private float[] lastDown;
 
     private Slider slider;
 
-    private float minPower, maxPower;
-
-    private static final float MAX_POWER = 254;
-    private static final float POWER_ARC_START = -180;
+    private static final float VALUE_ARC_START = -180;
 
 
-    public PowerSlider(Context context) {
+    public RoundSlider(Context context) {
         super(context);
         init(context);
     }
-    public PowerSlider(Context context, AttributeSet attrs, int defStyle) {
+    public RoundSlider(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init(context);
     }
-    public PowerSlider(Context context, AttributeSet attrs) {
+    public RoundSlider(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context);
     }
 
     private void init(Context context) {
         width = height = 0;
-        power = 0;
-        minPower = 0;
-        maxPower = 254;
+        value = 0;
+        minValue = 0;
+        maxValue = 254;
         lastDown = new float[]{0,0};
         holder = getHolder();
         holder.addCallback(this);
         backgroundColor = 0xffa0a0b0;
+        showPercentage = showValue = flipped = false;
         Log.d(TAG, "Surface initialized");
     }
 
-    public void setPower(int _power) {
-        power = _power;
+    public void setValue(int _value) {
+        value = _value;
+        if (value < minValue)
+            value = minValue;
+        else if (value > maxValue)
+            value = maxValue;
     }
 
-    public void setMinPower(int _minPower) {
-        Log.d(TAG, "minPower set: " + _minPower);
-        minPower = _minPower;
-        if (power < minPower)
-            power = minPower;
+    public void setMinValue(int _minValue) {
+        Log.d(TAG, "setting min value: " + _minValue);
+        minValue = _minValue;
+        if (value < minValue)
+            value = minValue;
     }
 
-    public void setMaxPower(int _maxPower) {
-        Log.d(TAG, "maxPower set: " + _maxPower);
-        maxPower = _maxPower;
-        if (power > maxPower)
-            power = maxPower;
+    public void setMaxValue(int _maxValue) {
+        Log.d(TAG, "setting max value: " + _maxValue);
+        maxValue = _maxValue;
+        if (value > maxValue)
+            value = maxValue;
+    }
+
+    public void setShowPercentage(boolean show) {
+        showPercentage = show;
+        if (show) showValue = false;
+    }
+
+    public void setShowValue(boolean show) {
+        showValue = show;
+        if (show) showPercentage = false;
+    }
+
+    public void setFlipped(boolean flip) {
+        flipped = flip;
     }
 
     public void setListener(Listener _listener) {
@@ -122,28 +141,32 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
         float y = e.getY();
         if (e.getAction() == MotionEvent.ACTION_DOWN) {
             lastDown[0] = x; lastDown[1] = y;
-        } else if (e.getAction() == MotionEvent.ACTION_UP) {        // set power and notify listener
+        } else if (e.getAction() == MotionEvent.ACTION_UP) {        // set value and notify listener
             if (lastDown[0] == x && lastDown[1] == y) { // click
                 Log.d(TAG, "click: x=" + x + " y=" + y);
                 float rad = (float)Math.atan2(y-slider.posy, x - slider.posx);
-                if (rad > -Math.PI && rad < -Math.PI/3*2)           // power to min
-                    power = minPower;
-                else if (rad > -Math.PI/3*2 && rad < -Math.PI/3)    // power to half
-                    power = (maxPower-minPower)/2 + minPower;
-                else if (rad < 0)                                   // power to max
-                    power = maxPower;
+                if (flipped) rad *= -1;
+                Log.d(TAG, "rad=" + rad);
+                if (rad > -Math.PI && rad < -Math.PI/3*2)           // value to min
+                    value = minValue;
+                else if (rad > -Math.PI/3*2 && rad < -Math.PI/3)    // value to half
+                    value = (maxValue-minValue)/2 + minValue;
+                else if (rad < 0)                                   // value to max
+                    value = maxValue;
             }
             Log.d(TAG, "power to listener...");
             if (listener != null)
-                listener.onPowerSet((int)power);
+                listener.onValueSet((int)value);
         } else {
             float rad = (float)Math.atan2(y-slider.posy, x - slider.posx);
+            if (flipped) rad *= -1;
+            Log.d(TAG, "rad=" + rad);
             if (rad > -Math.PI && rad < 0)
-                power = (float)(1+rad/Math.PI)*(maxPower-minPower) + minPower;
+                value = (float)(1+rad/Math.PI)*(maxValue-minValue) + minValue;
             else if (rad > Math.PI/2)
-                power = minPower;
+                value = minValue;
             else
-                power = maxPower;
+                value = maxValue;
         }
 
         renderContents();
@@ -160,17 +183,20 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private class Slider {
         RectF rectArc, rect;
-        Paint halfCirclePaint, powerArcPaint, percentagePaint;
+        Paint halfCirclePaint, valueArcPaint, percentagePaint;
         float posx, posy, radius;
 
         Slider(float x, float y, float r) {
+            if (flipped) y -= r;
+
             posx = x; posy = y; radius = r;
+
             rect = new RectF(x-r, y-r, x+r, y+r);
             rectArc = new RectF(x-r*0.9f, y-r*0.9f, x+r*0.9f, y+r*0.9f);
-            powerArcPaint = new Paint();
-            powerArcPaint.setStyle(Paint.Style.STROKE);
-            powerArcPaint.setStrokeWidth(2*(r-r*0.9f));
-            powerArcPaint.setColor(0xff0000ff);
+            valueArcPaint = new Paint();
+            valueArcPaint.setStyle(Paint.Style.STROKE);
+            valueArcPaint.setStrokeWidth(2*(r-r*0.9f));
+            valueArcPaint.setColor(0xff0000ff);
             halfCirclePaint = new Paint();
             halfCirclePaint.setStyle(Paint.Style.FILL);
             halfCirclePaint.setColor(0xff808080);
@@ -185,26 +211,30 @@ public class PowerSlider extends SurfaceView implements SurfaceHolder.Callback {
 
             canvas.drawColor(backgroundColor);
 
-            int br = (int)(255*(power-minPower)/(maxPower-minPower));
+            int br = (int)(255*(value-minValue)/(maxValue-minValue));
             int color = (0xff << 24) + (br << 16) + (br << 8) + br;
             halfCirclePaint.setColor(color);
 
             // draw half circle
-            canvas.drawArc(rect, POWER_ARC_START, 180, false, halfCirclePaint);
+            canvas.drawArc(rect, VALUE_ARC_START, flipped ? 360 : 180, false, halfCirclePaint);
 
-            // draw power arc
-            canvas.drawArc(rectArc, POWER_ARC_START, getArcEnd(), false, powerArcPaint);
+            // draw value arc
+            canvas.drawArc(rectArc, VALUE_ARC_START, getArcEnd(), false, valueArcPaint);
 
-            // draw power percentage
-            canvas.drawText((int)((power-minPower)/(maxPower-minPower)*100) + "%", posx, posy, percentagePaint);
+            if (showPercentage)     // draw value percentage
+                canvas.drawText((int)((value-minValue)/(maxValue-minValue)*100) + "%",
+                        posx, posy + (flipped ? radius/2 : -radius/5), percentagePaint);
+            else if (showValue)
+                canvas.drawText(Integer.toString((int)value),
+                        posx, posy + (flipped ? radius/2 : -radius/5), percentagePaint);
         }
 
         float getArcEnd() {
-            return (int)(power != 0 ? (power-minPower)/(maxPower-minPower) * 180: 0);
+            return (int)(value != 0 ? (value-minValue)/(maxValue-minValue) * (flipped ? -180 : 180): 0);
         }
     }
 
     public interface Listener {
-        void onPowerSet(int power);
+        void onValueSet(int value);
     }
 }

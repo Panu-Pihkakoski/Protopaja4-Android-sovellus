@@ -20,7 +20,7 @@ import com.proto4.protopaja.DaliGear;
 import com.proto4.protopaja.R;
 
 
-public class GearFragment extends Fragment implements PowerSlider.Listener {
+public class GearFragment extends Fragment {
 
     private static final String TAG = GearFragment.class.getSimpleName();
 
@@ -33,7 +33,7 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
     private String infoText;
     private boolean showInfo;
 
-    private PowerSlider powerSlider;
+    private RoundSlider powerSlider, colorTempSlider;
 
     private GearFragmentListener listener;
 
@@ -47,6 +47,7 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
     public static final int ACTION_QUERY = 3;
     public static final int ACTION_CLOSE = 4;
     public static final int ACTION_RENAME = 5;
+    public static final int ACTION_COLOR_TEMP = 6;
 
 
     public GearFragment() {
@@ -129,10 +130,31 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
 
         controlView  = activity.findViewById(R.id.gear_control_view);
         powerSlider = activity.findViewById(R.id.power_slider);
-        powerSlider.setListener(this);
-        powerSlider.setMinPower(gear.getMinPowerInt());
-        powerSlider.setMaxPower(gear.getMaxPowerInt());
-        powerSlider.setPower(gear.getPowerInt());
+        powerSlider.setListener(new RoundSlider.Listener(){
+            @Override
+            public void onValueSet(int value) {
+                onPowerSet(value);
+            }
+        });
+        powerSlider.setMinValue(gear.getMinPowerInt());
+        powerSlider.setMaxValue(gear.getMaxPowerInt());
+        powerSlider.setValue(gear.getPowerInt());
+        powerSlider.setShowPercentage(true);
+        //powerSlider.setVisibility(View.GONE);
+
+        colorTempSlider = activity.findViewById(R.id.color_temp_slider);
+        colorTempSlider.setListener(new RoundSlider.Listener() {
+            @Override
+            public void onValueSet(int value) {
+                onColorTempSet(value);
+            }
+        });
+        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
+        //colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
+        colorTempSlider.setMaxValue(100);
+        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
+        colorTempSlider.setShowValue(true);
+        colorTempSlider.setFlipped(true);
 
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);
@@ -143,7 +165,6 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
         toggleView();
     }
 
-    @Override
     public void onPowerSet(int power) {
         Log.d(TAG, "power set: " + power);
         powerLevel = power;
@@ -151,11 +172,16 @@ public class GearFragment extends Fragment implements PowerSlider.Listener {
             listener.onGearFragmentAction(ACTION_POWER_LEVEL, powerLevel, gear.getId());
     }
 
+    public void onColorTempSet(int colorTemp) {
+        Log.d(TAG, "color temp set: " + colorTemp);
+        if (listener != null)
+            listener.onGearFragmentAction(ACTION_COLOR_TEMP, colorTemp, gear.getId());
+    }
 
     public void setGear(DaliGear _gear) {
         gear = _gear;
         powerLevel = gear.getPowerInt();
-        powerSlider.setPower(powerLevel);
+        powerSlider.setValue(powerLevel);
         infoText = gear.getInfoString();
     }
 

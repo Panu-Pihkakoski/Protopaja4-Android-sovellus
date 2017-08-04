@@ -55,10 +55,15 @@
         android:layout_height="match_parent"
         android:layout_below="@id/gear_top_buttons" >
 
-        <com.proto4.protopaja.ui.PowerSlider
+        <com.proto4.protopaja.ui.RoundSlider
             android:id="@+id/power_slider"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+        <com.proto4.protopaja.ui.RoundSlider
+            android:id="@+id/color_temp_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/power_slider" />
 
     </RelativeLayout>
 

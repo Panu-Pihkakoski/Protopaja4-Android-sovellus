@@ -103,16 +103,20 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
 
     // controller to phone
-    private static final byte MESSAGE_TYPE_GEAR_DATA = 'U';
-
+    private static final byte MESSAGE_TYPE_GEAR_CONST = 'C';
+    private static final byte MESSAGE_TYPE_GEAR_UPDATE = 'U';
     private static final byte MESSAGE_TYPE_RESPONSE = 'A';
 
     // phone to controller
     private static final byte MESSAGE_TYPE_QUERY = 'Q';
     private static final byte MESSAGE_TYPE_COMMAND = 'D';
     private static final byte MESSAGE_TYPE_POWER = 'P';
+    private static final byte MESSAGE_TYPE_CTEMP = 'T';
+
 
     private static final byte MESSAGE_TYPE_BROADCAST = 'B';
+
+
 
     // common
     private static final byte MESSAGE_TYPE_EXCEPTION = 'E';
@@ -360,6 +364,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 if (value == 0) setGearPower(gearId, false);
                 else setGearPowerLevel(gearId, value);
                 break;
+            case GearFragment.ACTION_COLOR_TEMP:
+                setGearColorTemperature(gearId, value);
+                break;
             case GearFragment.ACTION_STEP: // not implemented
                 // step
                 break;
@@ -434,6 +441,19 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         sendData(data);
     }
 
+    private void setGearColorTemperature(byte gearId, int colorTemp) {
+        DaliGear gear = gearMap.get(gearId);
+        if (gear == null)
+            return;
+        //gear.setDataByte(DaliGear.DATA_COLOR_TEMP, (byte)colorTemp);
+
+        byte[] data;
+        data = new byte[]{MESSAGE_TYPE_CTEMP, gearId, (byte)colorTemp, MESSAGE_END};
+        sendData(data);
+    }
+
+
+
     private void addCheckedItemsToGroup(byte groupId) {
 
         boolean newGroup = false;
@@ -487,45 +507,70 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         });
     }
 
-    // updates gears
+    // sets gear constants
     // if matching id isn't found, new gear will be added
-    private int updateGears(byte[] bytes) {
-
-        if (bytes[0] == NO_GEAR_DATA) {
-            Log.d(TAG, "No devices to update");
-            return 0;
+    private int setGearConstants(byte[] bytes) {
+        // bytes = { id, min power, max power, color temp cap, coolest, warmest }
+        final byte gearId = bytes[0];
+        if (gearId == NO_GEAR_DATA) {
+            Log.d(TAG, "setGearConstants(): No device specified");
+            return -1;
         }
 
-        int count = 0;
-        int i, dataEndIdx;
-        i = 0;
-        while (i < bytes.length) {
-            dataEndIdx = i+1;
-            while (dataEndIdx < bytes.length && bytes[dataEndIdx] != '!') {
-                dataEndIdx++;
-            }
+        DaliGear toUpdate = gearMap.get(gearId);
+        if (toUpdate == null) {     // add new gear
+            Log.d(TAG, "New gear with id=" + (int)gearId);
 
-            DaliGear toUpdate = gearMap.get(bytes[i]);
-            if (toUpdate == null) {
-                Log.d(TAG, "New gear with id=" + (int)bytes[i]);
-                String gearName = "New gear [" + (int)bytes[i] + "]";
-                gearMap.put(bytes[i], new DaliGear(gearName, Arrays.copyOfRange(bytes, i, dataEndIdx)));
-                final RecyclerListItem item = new RecyclerListItem(gearName,
-                            RecyclerListItem.TYPE_GEAR, bytes[i]);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        listFragment.addItem(item);
-                    }
-                });
-            } else {
-                toUpdate.setData(Arrays.copyOfRange(bytes, i, dataEndIdx));
+            final String gearName = "New gear [" + (int)gearId + "]";
+            toUpdate = new DaliGear(gearName, gearId);
+            gearMap.put(gearId, toUpdate);
 
-            }
-            i = dataEndIdx+1;
-            count++;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    listFragment.addItem(gearName, RecyclerListItem.TYPE_GEAR, gearId);
+                }
+            });
+        } else {
+            Log.d(TAG, "setting constants for existing gear");
         }
-        return count;
+
+        toUpdate.setConstants(Arrays.copyOfRange(bytes, 1, bytes.length));
+
+        return 0;
+    }
+
+    // updates gear
+    // if matching id isn't found, new gear will be added
+    private int updateGear(byte[] bytes) {
+        // bytes = { id, status, power level, color temp }
+        final byte gearId = bytes[0];
+        if (gearId == NO_GEAR_DATA) {
+            Log.d(TAG, "updateGear(): No device specified");
+            return -1;
+        }
+
+        DaliGear toUpdate = gearMap.get(gearId);
+        if (toUpdate == null) {     // add new gear
+            Log.d(TAG, "New gear with id=" + (int)gearId);
+
+            final String gearName = "New gear [" + (int)gearId + "]";
+            toUpdate = new DaliGear(gearName, gearId);
+            gearMap.put(gearId, toUpdate);
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    listFragment.addItem(gearName, RecyclerListItem.TYPE_GEAR, gearId);
+                }
+            });
+        } else {
+            Log.d(TAG, "updating existing gear");
+        }
+
+        toUpdate.update(Arrays.copyOfRange(bytes, 1, bytes.length));
+
+        return 0;
     }
 
     private void parseResponse(byte[] bytes) {
@@ -760,9 +805,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         final String data = new String(bytes, Charset.forName("UTF-8"));
         Log.d(TAG, "parsing message: \"" + data + "\"");
         switch (bytes[MESSAGE_IND_TYPE]) {
-            case MESSAGE_TYPE_GEAR_DATA:
-                Log.d(TAG, "message: gear data");
-                updateGears(Arrays.copyOfRange(bytes, 1, bytes.length));
+            case MESSAGE_TYPE_GEAR_CONST:
+                Log.d(TAG, "message: gear constants");
+                setGearConstants(Arrays.copyOfRange(bytes, 1, bytes.length));
+                break;
+            case MESSAGE_TYPE_GEAR_UPDATE:
+                Log.d(TAG, "message: gear update");
+                updateGear(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
             case MESSAGE_TYPE_RESPONSE:
                 parseResponse(Arrays.copyOfRange(bytes, 1, bytes.length));
