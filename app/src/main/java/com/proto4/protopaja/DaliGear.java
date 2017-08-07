@@ -201,6 +201,7 @@ public class DaliGear {
         byte status = data[DATA_STATUS];
         String info = "";
         info += "Power level = " + getPowerInt() + "\n";
+        info += "Color temperature = " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";

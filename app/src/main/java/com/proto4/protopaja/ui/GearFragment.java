@@ -182,6 +182,7 @@ public class GearFragment extends Fragment {
         gear = _gear;
         powerLevel = gear.getPowerInt();
         powerSlider.setValue(powerLevel);
+        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
         infoText = gear.getInfoString();
     }
 
@@ -189,6 +190,8 @@ public class GearFragment extends Fragment {
         if (infoText != null)
             infoViewText.setText(infoText);
         showInfo = !showInfo;
+        if (showInfo)
+            infoViewText.setText(gear.getInfoString());
         infoView.setVisibility(showInfo ? View.VISIBLE : View.GONE);
         controlView.setVisibility(showInfo ? View.GONE : View.VISIBLE);
         toggleViewButton.setText(showInfo ? "Control" : "Info");
