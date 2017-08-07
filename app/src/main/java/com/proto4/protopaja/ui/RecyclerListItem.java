@@ -9,7 +9,7 @@ public class RecyclerListItem {
 
     private String title, extra;
     private byte id;
-    private boolean isChecked, showCheckBox, showTemperature;
+    private boolean isChecked, showCheckBox, showTemperature, showExtraText;
 
     private int type, brightness;
 
@@ -38,6 +38,7 @@ public class RecyclerListItem {
         isChecked = false;
         showCheckBox = false;
         showTemperature = false;
+        showExtraText = false;
         brightness = 0;
     }
 
@@ -73,6 +74,10 @@ public class RecyclerListItem {
         return showTemperature;
     }
 
+    public boolean showExtraText() {
+        return showExtraText;
+    }
+
     public void setBrightness(int _brightness) {
         brightness = _brightness;
         Log.d(TAG, "brightness=" + brightness);
@@ -84,6 +89,10 @@ public class RecyclerListItem {
 
     public void setExtra(String _extra) {
         extra = _extra;
+    }
+
+    public void appendExtra(String _extra) {
+        extra += _extra;
     }
 
     public void setType(int _type) {
@@ -100,6 +109,10 @@ public class RecyclerListItem {
 
     public void showTempIcon(boolean show) {
         showTemperature = show;
+    }
+
+    public void showExtraText(boolean show) {
+        showExtraText = show;
     }
 
     public void setChecked(boolean checked) {

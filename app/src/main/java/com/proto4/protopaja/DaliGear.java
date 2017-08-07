@@ -177,10 +177,13 @@ public class DaliGear {
         return group != null;
     }
 
-    public void addGroupMember(DaliGear gear) {
+    public boolean addGroupMember(DaliGear gear) {
         if (group == null)
             group = new ArrayList<>();
+        if (group.contains(gear))
+            return false;
         group.add(gear);
+        return true;
     }
 
     public void removeGroupMember(DaliGear gear){

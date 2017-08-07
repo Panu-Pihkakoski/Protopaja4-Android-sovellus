@@ -400,6 +400,17 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 else if (groupMap.containsKey(item.getId()))
                     showGearFragment(item.getId(), true);
                 break;
+            case ListFragment.ITEM_ACTION_EXPAND:
+                DaliGear group = groupMap.get(item.getId());
+                if (group == null) break;
+                listFragment.expandGroup(item, group.getGroup());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        listFragment.update();
+                    }
+                });
+                break;
             case ListFragment.ACTION_GROUP_SELECTED:
                 addCheckedItemsToGroup(item.getId());
                 defineGroup(item.getId());
@@ -426,6 +437,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             g.setPower((byte)powerLevel);
             float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*256;
             listFragment.getItemById(gearId).setBrightness((int)br);
+        } else {
+            DaliGear group = groupMap.get(gearId);
+            if (group == null) return;
+            group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
+            for (DaliGear gear : group.getGroup()) {
+                setGearPowerLevel(gear.getId(), powerLevel);
+            }
+            return;
         }
 
         byte[] data;
@@ -474,14 +493,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void addCheckedItemsToGroup(byte groupId) {
 
         boolean newGroup = false;
-        DaliGear group = null;
+        DaliGear group = null, baseGroup = groupMap.get(NO_GEAR_DATA);
+        String memberNameList = "";
+
         if (groupId == (byte)255) { // new group without id
             newGroup = true;
             byte newId = 0;
             while (groupMap.containsKey(newId)) {
                 newId++;
                 if (newId == (byte)255) {
-                    Log.d(TAG, "all group ids reserved");
+                    Log.w(TAG, "all group ids reserved");
                     return;
                 }
             }
@@ -497,8 +518,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         // get selected items from list fragment and add to group
         for (RecyclerListItem item : listFragment.getSelectedItems()) {
             DaliGear gear = gearMap.get(item.getId());
-            if (gear != null)
+            if (gear != null) {
                 group.addGroupMember(gear);
+                baseGroup.addGroupMember(gear);
+            }
         }
         if (!group.isGroup()) {   // group is empty?
             Log.d(TAG, "tried to create empty group");
@@ -508,6 +531,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             groupMap.put(groupId, group);
             final RecyclerListItem item = new RecyclerListItem("New group",
                     RecyclerListItem.TYPE_GROUP, groupId);
+            item.setExtra(memberNameList);
 
             runOnUiThread(new Runnable() {
                 @Override
@@ -541,7 +565,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             final String gearName = "New gear [" + (int)gearId + "]";
             toUpdate = new DaliGear(gearName, gearId);
             gearMap.put(gearId, toUpdate);
-
+            groupMap.get(NO_GEAR_DATA).addGroupMember(toUpdate);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -574,7 +598,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             final String gearName = "New gear [" + (int)gearId + "]";
             toUpdate = new DaliGear(gearName, gearId);
             gearMap.put(gearId, toUpdate);
-
+            groupMap.get(NO_GEAR_DATA).addGroupMember(toUpdate);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -660,13 +684,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             deviceAddress = connectedDevice.getAddress();
 
         gearMap.clear();
+        groupMap.clear();
 
-        // this gear instance will be used to send broadcast commands
-        // TODO: use group item instead
         DaliGear g = new DaliGear("All");
         g.setId(NO_GEAR_DATA);
-        gearMap.put(g.getId(), g);
-        final RecyclerListItem item = new RecyclerListItem("All", RecyclerListItem.TYPE_GEAR, NO_GEAR_DATA);
+        groupMap.put(NO_GEAR_DATA, g);
+        final RecyclerListItem item = new RecyclerListItem("All", RecyclerListItem.TYPE_GROUP, NO_GEAR_DATA);
 
         runOnUiThread(new Runnable() {
             @Override
@@ -678,6 +701,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         });
 
+        // add some dummy gears; remove sometime
+        for (int i = 0; i < 5; i++) {
+            byte[] bytes = {(byte)i, 0, 0, 0};
+            updateGear(bytes);
+        }
     }
 
     @Override

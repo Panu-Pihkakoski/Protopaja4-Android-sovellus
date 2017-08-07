@@ -28,6 +28,8 @@ public class ListFragment extends Fragment {
     private ArrayList<RecyclerListItem> selectedItems;
     private RecyclerView recyclerView;
 
+    private RecyclerListItem expandedGroup;
+
     private boolean isSelecting;
 
     private ListFragmentListener listener;
@@ -133,7 +135,46 @@ public class ListFragment extends Fragment {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
+    public void expandGroup(RecyclerListItem group, ArrayList<DaliGear> gears) {
+
+        ArrayList<RecyclerListItem> toRemove = new ArrayList<>();
+        int groupPosition = -1;
+        for (int i = 0; i < listItems.size(); i++) {
+            RecyclerListItem item = listItems.get(i);
+            if (item.getType() == RecyclerListItem.TYPE_GEAR)
+                toRemove.add(item);
+            else if (item == group)
+                groupPosition = i;
+        }
+        if (groupPosition == -1) {
+            Log.w(TAG, "unable to expand group");
+            return;
+        }
+        if (expandedGroup != group) {
+            for (DaliGear g : gears) {
+                listItems.add(groupPosition+1,
+                        new RecyclerListItem(g.getName(), RecyclerListItem.TYPE_GEAR, g.getId()));
+            }
+            expandedGroup = group;
+        } else {
+            expandedGroup = null;
+        }
+
+        for (int i = 0; i < toRemove.size(); i++) {
+            listItems.remove(toRemove.get(i));
+        }
+
+    }
+
+    private void toggleShowGroupMembers(int position) {
+        Log.d(TAG, "toggleShowGroupMembers(position=" + position + ")");
+        RecyclerListItem item = listItems.get(position);
+        item.showExtraText(!item.showExtraText());
+        recyclerView.getAdapter().notifyItemChanged(position);
+    }
+
     private void startSelection(int position) {
+        Log.d(TAG, "startSelection(position=" + position + ")");
         RecyclerListItem item;
         isSelecting = true;
         for (int i = 0; i < listItems.size(); i++) {
@@ -151,9 +192,10 @@ public class ListFragment extends Fragment {
 
     private void select(int position) {
         Log.d(TAG, "select(" + position + ")");
-        listItems.get(position).setChecked(!listItems.get(position).isChecked());   // toggle select
+        RecyclerListItem item = listItems.get(position);
+        item.setChecked(!item.isChecked());   // toggle select
         recyclerView.getAdapter().notifyItemChanged(position);
-        if (listItems.get(position).isChecked())
+        if (item.isChecked())
             selectedItems.add(listItems.get(position));
         else
             selectedItems.remove(listItems.get(position));
@@ -230,8 +272,13 @@ public class ListFragment extends Fragment {
                 final RecyclerListItem item = listItems.get(position);
                 if (item.getType() == RecyclerListItem.TYPE_BT_DEVICE || isSelecting) // doesn't react to long click
                     return false;
-                if (item.getType() == RecyclerListItem.TYPE_GEAR) {   // start selecting items
+                if (item.getType() == RecyclerListItem.TYPE_GEAR) { // start selecting items
                     startSelection(position);
+                } else if (item.getType() == RecyclerListItem.TYPE_GROUP) {
+                    //toggleShowGroupMembers(position);
+                    if (listener != null) {
+                        listener.onListFragmentAction(ITEM_ACTION_EXPAND, item);
+                    }
                 }
                 return true;
             }
