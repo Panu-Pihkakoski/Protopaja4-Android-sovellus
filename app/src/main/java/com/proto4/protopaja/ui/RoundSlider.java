@@ -27,7 +27,7 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private float value, minValue, maxValue;
 
-    private boolean showPercentage, showValue, flipped;
+    private boolean showPercentage, showValue, showKelvins, flipped;
 
     private float[] lastDown;
 
@@ -58,7 +58,7 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
         holder = getHolder();
         holder.addCallback(this);
         backgroundColor = 0xffa0a0b0;
-        showPercentage = showValue = flipped = false;
+        showPercentage = showValue = showKelvins = flipped = false;
         Log.d(TAG, "Surface initialized");
     }
 
@@ -86,12 +86,26 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     public void setShowPercentage(boolean show) {
         showPercentage = show;
-        if (show) showValue = false;
+        if (show) {
+            showValue = false;
+            showKelvins = false;
+        }
     }
 
     public void setShowValue(boolean show) {
         showValue = show;
-        if (show) showPercentage = false;
+        if (show) {
+            showPercentage = false;
+            showKelvins = false;
+        }
+    }
+
+    public void setShowKelvins(boolean show) {
+        showKelvins = show;
+        if (show) {
+            showPercentage = false;
+            showValue = false;
+        }
     }
 
     public void setFlipped(boolean flip) {
@@ -218,6 +232,14 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
             // draw half circle
             canvas.drawArc(rect, VALUE_ARC_START, flipped ? 360 : 180, false, halfCirclePaint);
 
+            if (flipped) {
+                int c = 0xff000000;
+                int b = (int)(256*(value-minValue)/(maxValue-minValue));
+                int r = 255-b;
+                c += (b << 16) + r;
+                valueArcPaint.setColor(c);
+            }
+
             // draw value arc
             canvas.drawArc(rectArc, VALUE_ARC_START, getArcEnd(), false, valueArcPaint);
 
@@ -226,6 +248,9 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
                         posx, posy + (flipped ? radius/2 : -radius/5), percentagePaint);
             else if (showValue)
                 canvas.drawText(Integer.toString((int)value),
+                        posx, posy + (flipped ? radius/2 : -radius/5), percentagePaint);
+            else if (showKelvins)
+                canvas.drawText(Integer.toString((int)value*100) + "K",
                         posx, posy + (flipped ? radius/2 : -radius/5), percentagePaint);
         }
 

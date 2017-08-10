@@ -41,6 +41,7 @@ public class ListFragment extends Fragment {
     public static final int ITEM_ACTION_EXPAND = 4;
 
     public static final int ACTION_GROUP_SELECTED = 5;
+    public static final int ACTION_EXPANDED_GROUP_SELECTED = 6;
 
     public ListFragment() {
 
@@ -151,8 +152,9 @@ public class ListFragment extends Fragment {
             return;
         }
         if (expandedGroup != group) {
-            for (DaliGear g : gears) {
-                listItems.add(groupPosition+1,
+            for (int i = 0; i < gears.size(); i++) {
+                DaliGear g = gears.get(i);
+                listItems.add(++groupPosition,
                         new RecyclerListItem(g.getName(), RecyclerListItem.TYPE_GEAR, g.getId()));
             }
             expandedGroup = group;
@@ -196,12 +198,30 @@ public class ListFragment extends Fragment {
         item.setChecked(!item.isChecked());   // toggle select
         recyclerView.getAdapter().notifyItemChanged(position);
         if (item.isChecked())
-            selectedItems.add(listItems.get(position));
+            selectedItems.add(item);
         else
-            selectedItems.remove(listItems.get(position));
+            selectedItems.remove(item);
         if (selectedItems.isEmpty())
             clearSelection();
-        Log.d(TAG, "selectedItems.size()==" + selectedItems.size());
+        String si = "";
+        for (RecyclerListItem i : selectedItems) {
+            si += i.getTitle() + "\n";
+        }
+        Log.d(TAG, "selectedItems (" + selectedItems.size() + "):\n" + si);
+    }
+
+    public void removeSelectedItems() {
+        for (int i = 0; i < selectedItems.size(); i++) {
+            listItems.remove(selectedItems.get(i));
+        }
+        recyclerView.getAdapter().notifyDataSetChanged();
+    }
+
+    public void removeExpandedGroup() {
+        if (expandedGroup == null) return;
+        listItems.remove(expandedGroup);
+        expandedGroup = null;
+        recyclerView.getAdapter().notifyDataSetChanged();
     }
 
     @Override
@@ -247,7 +267,8 @@ public class ListFragment extends Fragment {
                         select(position);
                     else if (item.getType() == RecyclerListItem.TYPE_GROUP) {
                         if (listener != null)
-                            listener.onListFragmentAction(ACTION_GROUP_SELECTED, item);
+                            listener.onListFragmentAction((item == expandedGroup) ?
+                                    ACTION_EXPANDED_GROUP_SELECTED : ACTION_GROUP_SELECTED, item);
                     }
                     return;
                 }

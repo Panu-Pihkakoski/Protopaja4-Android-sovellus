@@ -53,7 +53,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private TextView titleView;
 
-    //private RecyclerView recyclerView;
     private ListFragment listFragment;
 
     private FrameLayout fragmentLayout;
@@ -61,12 +60,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private Fragment activeFragment;
     private GearFragment gearFragment;
 
-    //private ArrayList<RecyclerListItem> recyclerListItems;
-
     private BleManager bleManager;
     private BleScanner bleScanner;
 
-    private boolean scanning;
+    private boolean scanning, skipConnect;
 
     private BluetoothDevice connectedDevice;
     private String deviceAddress;
@@ -81,11 +78,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private static final String DEVICE_ADDRESS = "DEVICE_ADDRESS";
     private static final String AUTO_CONNECT = "AUTO_CONNECT";
-
-    // list item actions on click
-    private static final int ITEM_ACTION_CONNECT = 0;
-    private static final int ITEM_ACTION_OPEN = 1;
-    private static final int ITEM_ACTION_OPEN_GROUP = 2;
 
     private static final byte NO_GEAR_DATA = (byte)255;
 
@@ -110,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     // phone to controller
     private static final byte MESSAGE_TYPE_QUERY = 'Q';
     private static final byte MESSAGE_TYPE_COMMAND = 'D';
-    private static final byte MESSAGE_TYPE_POWER = 'P';
+    //private static final byte MESSAGE_TYPE_POWER = 'P'; // ?
     private static final byte MESSAGE_TYPE_CTEMP = 'T';
 
 
@@ -118,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     // common
     private static final byte MESSAGE_TYPE_EXCEPTION = 'E';
-    private static final byte MESSAGE_TYPE_DEF_GROUP = 'G';
+    private static final byte MESSAGE_TYPE_GROUP = 'G';
 
     private static final byte MESSAGE_END = '!';
 
@@ -188,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         // bleScanner provides bluetooth scan methods
         bleScanner = new BleScanner(bleManager.getAdapter(this), this);
-        scanning = false;
+        scanning = skipConnect = false;
 
         loadValues(); // load saved values
         /*if (deviceAddress != null) { // check whether saved device address exists. if yes, connect to it
@@ -217,6 +209,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             case R.id.action_create_group:
                 addCheckedItemsToGroup((byte)255);
                 return true;
+            case R.id.action_skip_connect:
+                skipConnect = true;
+                onConnected();
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -333,6 +328,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             listFragment = ListFragment.newInstance(this);
             listFragment.setListener(this);
         }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                titleView.setText("");
+            }
+        });
         getFragmentManager().beginTransaction()
                 .replace(R.id.main_fragment_content, listFragment)
                 .commit(); // sets list fragment on fragment container
@@ -413,7 +414,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 break;
             case ListFragment.ACTION_GROUP_SELECTED:
                 addCheckedItemsToGroup(item.getId());
-                defineGroup(item.getId());
+                break;
+            case ListFragment.ACTION_EXPANDED_GROUP_SELECTED:
+                removeCheckedItemsFromGroup(item.getId());
                 break;
             default:
                 Log.d(TAG, "unknown list fragment action");
@@ -433,13 +436,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     // set power level for gear with id=gearId
     private void setGearPowerLevel(byte gearId, int powerLevel) {
         DaliGear g = gearMap.get(gearId);
-        if (g != null) {
+        if (g != null) {    // gear was found in gearMap
             g.setPower((byte)powerLevel);
             float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*256;
             listFragment.getItemById(gearId).setBrightness((int)br);
-        } else {
+        } else {            // gear should be a group
             DaliGear group = groupMap.get(gearId);
-            if (group == null) return;
+            if (group == null) return;  // wasn't a group...
             group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
             for (DaliGear gear : group.getGroup()) {
                 setGearPowerLevel(gear.getId(), powerLevel);
@@ -449,7 +452,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         byte[] data;
         if (gearId != NO_GEAR_DATA)
-            data = new byte[]{MESSAGE_TYPE_POWER, gearId, 0, (byte) powerLevel, MESSAGE_END};
+            data = new byte[]{MESSAGE_TYPE_COMMAND, gearId, 0, (byte) powerLevel, MESSAGE_END};
         else data = new byte[]{MESSAGE_TYPE_BROADCAST, (byte)powerLevel, MESSAGE_END};
         sendData(data);
     }
@@ -472,6 +475,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         sendData(data);
     }
 
+    private void sendQuery(byte gearId) {
+        byte[] msg = new byte[]{MESSAGE_TYPE_QUERY, gearId, MESSAGE_END};
+        sendData(msg);
+    }
+
+    /*
+    // not needed anymore...
     private void defineGroup(byte groupId) {
         DaliGear group = groupMap.get(groupId);
         if (group == null) {
@@ -481,27 +491,26 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         ArrayList<DaliGear> list = group.getGroup();
         byte[] msg = new byte[3 + list.size()];
-        msg[0] = MESSAGE_TYPE_DEF_GROUP;
+        msg[0] = MESSAGE_TYPE_GROUP;
         msg[1] = groupId;
         for (int i = 0; i < list.size(); i++) {
             msg[i+2] = list.get(i).getId();
         }
         msg[msg.length-1] = MESSAGE_END;
         sendData(msg);
-    }
+    }*/
 
     private void addCheckedItemsToGroup(byte groupId) {
 
         boolean newGroup = false;
         DaliGear group = null, baseGroup = groupMap.get(NO_GEAR_DATA);
-        String memberNameList = "";
 
-        if (groupId == (byte)255) { // new group without id
+        if (groupId == NO_GEAR_DATA) { // new group
             newGroup = true;
             byte newId = 0;
             while (groupMap.containsKey(newId)) {
                 newId++;
-                if (newId == (byte)255) {
+                if (newId == NO_GEAR_DATA) {
                     Log.w(TAG, "all group ids reserved");
                     return;
                 }
@@ -511,7 +520,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             group = groupMap.get(groupId);
         if (group == null) {    // group with id=groupId not found; create new group
             newGroup = true;
-            group = new DaliGear("New group");
+            group = new DaliGear("New group [" + groupId + "]");
             group.setId(groupId);
         }
 
@@ -519,8 +528,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         for (RecyclerListItem item : listFragment.getSelectedItems()) {
             DaliGear gear = gearMap.get(item.getId());
             if (gear != null) {
-                group.addGroupMember(gear);
                 baseGroup.addGroupMember(gear);
+                if (group.addGroupMember(gear)) {
+                    Log.d(TAG, "sending group message: add member");
+                    // send group message
+                    byte[] bytes = new byte[]{MESSAGE_TYPE_GROUP, groupId, '+', gear.getId(), MESSAGE_END};
+                    sendData(bytes);
+                }
             }
         }
         if (!group.isGroup()) {   // group is empty?
@@ -529,9 +543,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
         if (newGroup) {
             groupMap.put(groupId, group);
-            final RecyclerListItem item = new RecyclerListItem("New group",
+            final RecyclerListItem item = new RecyclerListItem("New group [" + groupId + "]",
                     RecyclerListItem.TYPE_GROUP, groupId);
-            item.setExtra(memberNameList);
 
             runOnUiThread(new Runnable() {
                 @Override
@@ -543,6 +556,40 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                listFragment.clearSelection();
+            }
+        });
+    }
+
+    private void removeCheckedItemsFromGroup(byte groupId) {
+        if (groupId == NO_GEAR_DATA) return;
+        DaliGear group = groupMap.get(groupId);
+        if (group == null) {
+            Log.w(TAG, "removeCheckedItemsFromGroup(): group " + groupId + " not found");
+            return;
+        }
+
+        for (RecyclerListItem item : listFragment.getSelectedItems()) {
+            DaliGear gear = gearMap.get(item.getId());
+            if (gear == null) continue;
+            if (group.removeGroupMember(gear)) {
+                Log.d(TAG, "sending group message: remove member");
+                // send group message
+                byte[] bytes = new byte[]{MESSAGE_TYPE_GROUP, groupId, '-', gear.getId(), MESSAGE_END};
+                sendData(bytes);
+            }
+        }
+        final boolean groupEmpty;
+        if (!group.isGroup()) {
+            groupMap.remove(groupId);
+            groupEmpty = true;
+        } else groupEmpty = false;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (groupEmpty)
+                    listFragment.removeExpandedGroup();
+                listFragment.removeSelectedItems();
                 listFragment.clearSelection();
             }
         });
@@ -611,6 +658,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         toUpdate.update(Arrays.copyOfRange(bytes, 1, bytes.length));
 
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (activeFragment == gearFragment) {
+                    gearFragment.update();
+                }
+            }
+        });
+
         return 0;
     }
 
@@ -647,7 +703,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 listFragment.addItem(d.getName() != null ?
                         d.getName() : d.getAddress(), d.getAddress(), RecyclerListItem.TYPE_BT_DEVICE, (byte)0);
                 if (foundDevices.size() == 1)
-                    titleView.setText("Scanned Devices");
+                    titleView.setText("Scanned devices");
             }
         });
     }
@@ -686,6 +742,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         gearMap.clear();
         groupMap.clear();
 
+        // add group to hold all gears
         DaliGear g = new DaliGear("All");
         g.setId(NO_GEAR_DATA);
         groupMap.put(NO_GEAR_DATA, g);
@@ -698,13 +755,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 listFragment.addItem(item);
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
+                titleView.setText("Connected");
             }
         });
 
-        // add some dummy gears; remove sometime
-        for (int i = 0; i < 5; i++) {
-            byte[] bytes = {(byte)i, 0, 0, 0};
-            updateGear(bytes);
+        if (skipConnect) {
+            // add some dummy gears; remove sometime
+            for (int i = 0; i < 5; i++) {
+                byte[] bytes = {(byte) i, 0, 0, 0};
+                updateGear(bytes);
+                gearMap.get((byte)i).setDataByte(DaliGear.DATA_COLOR_COOLEST, (byte)67);
+                gearMap.get((byte)i).setDataByte(DaliGear.DATA_COLOR_WARMEST, (byte)27);
+            }
         }
     }
 
@@ -716,6 +778,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             public void run() {
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
+                titleView.setText("Disconnected");
             }
         });
     }
@@ -737,8 +800,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (characteristic.getService().getUuid().toString().equalsIgnoreCase(UUID_SERVICE)) {
             if (characteristic.getUuid().toString().equalsIgnoreCase(UUID_RX)) {
                 final byte[] bytes = characteristic.getValue();
-                final String data = new String(bytes, Charset.forName("UTF-8"));
-                Log.d(TAG, "data received:\n" + data);
+                String datastr = new String(bytes, Charset.forName("UTF-8"));
+                datastr += "\n";
+                for (int i = 0; i < bytes.length; i++) {
+                    datastr += " | " + (bytes[i] < 0 ? bytes[i] + 256 : bytes[i]);
+                }
+                Log.d(TAG, "data received:\n" + datastr);
                 int startIndex = 0;
                 int endIndex;
                 int index = 0;
@@ -799,7 +866,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             @Override
             public void run() {
                 listFragment.clear();
-                titleView.setText("No Devices");
+                titleView.setText("No devices");
                 progressBar.setVisibility(View.VISIBLE);
                 toolbar.setTitle("Scanning...");
             }
@@ -815,8 +882,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void connect(String address){
         Log.d(TAG, "Connecting to " + address);
-        onConnected(); // skip actual connection
-        //bleManager.connect(this, address);
+        //onConnected(); // skip actual connection
+        bleManager.connect(this, address);
     }
 
     private void connect(BluetoothDevice device){
@@ -834,8 +901,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void sendData(byte[] data) {
         if (uartService != null) {
-            final String datastr = new String(data, Charset.forName("UTF-8"));
+            String datastr = new String(data, Charset.forName("UTF-8"));
+            datastr += "\n";
+            for (int i = 0; i < data.length; i++) {
+                datastr += " | " + (data[i] < 0 ? data[i] + 256 : data[i]);
+            }
             Log.d(TAG, "Sending data:\n" + datastr);
+
             // Split the value into chunks (UART service has a maximum number of characters that can be written )
             for (int i = 0; i < data.length; i += TX_MAX_CHARS) {
                 final byte[] chunk = Arrays.copyOfRange(data, i, Math.min(i + TX_MAX_CHARS, data.length));
@@ -858,10 +930,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 Log.d(TAG, "message: gear update");
                 updateGear(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
-            case MESSAGE_TYPE_RESPONSE:
+            case MESSAGE_TYPE_GROUP:
+                parseGroupMessage(Arrays.copyOfRange(bytes, 1, bytes.length));
+                break;
+            case MESSAGE_TYPE_RESPONSE:     // not implemented
                 parseResponse(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
-            case MESSAGE_TYPE_EXCEPTION:
+            case MESSAGE_TYPE_EXCEPTION:    // not implemented
                 Log.d(TAG, "message: exception");
                 // handle exception
                 break;
@@ -869,6 +944,38 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 Log.d(TAG, "message: not recognized (" + (int)bytes[MESSAGE_IND_TYPE] + ")");
                 break;
         }
+    }
+
+    private void parseGroupMessage(byte[] bytes) {
+        if (bytes.length < 3) return;
+        byte groupId = bytes[0];
+        DaliGear group = groupMap.get(groupId);
+        if (group == null) {
+            Log.d(TAG, "group message: couldn't find group " + groupId + ":\tcreating new group");
+            group = new DaliGear("New group [" + (groupId < 0 ? groupId + 256 : groupId) + "]", groupId);
+            groupMap.put(groupId, group);
+        }
+        if (bytes[1] == '+') {
+            DaliGear gearToAdd = gearMap.get(bytes[2]);
+            if (gearToAdd == null) {
+                Log.w(TAG, "group message (+): couldn't find gear " + bytes[2]);
+                return;
+            }
+            group.addGroupMember(gearToAdd);
+        } else if (bytes[1] == '-') {
+            DaliGear gearToRemove = gearMap.get(bytes[2]);
+            if (gearToRemove == null) {
+                Log.w(TAG, "group message (-): coundn't find gear " + bytes[2]);
+                return;
+            }
+            group.removeGroupMember(gearToRemove);
+        }
+        // debug
+        String groupContents = "";
+        for (DaliGear g : group.getGroup()) {
+            groupContents += g.getName() + "\n";
+        }
+        Log.d(TAG, "group " + groupId + " after modification:\n" + groupContents);
     }
 
 

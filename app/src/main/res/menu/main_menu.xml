@@ -12,6 +12,10 @@
 
     <item android:id="@+id/action_create_group"
         android:title="@string/action_create_group"
+        app:showAsAction="always" />
+
+    <item android:id="@+id/action_skip_connect"
+        android:title="skip connect"
         app:showAsAction="never" />
 
 </menu>

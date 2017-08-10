@@ -149,11 +149,10 @@ public class GearFragment extends Fragment {
                 onColorTempSet(value);
             }
         });
-        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
-        //colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
-        colorTempSlider.setMaxValue(100);
+        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
+        colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
         colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
-        colorTempSlider.setShowValue(true);
+        colorTempSlider.setShowKelvins(true);
         colorTempSlider.setFlipped(true);
 
         infoView = activity.findViewById(R.id.gear_info_view);
@@ -211,6 +210,16 @@ public class GearFragment extends Fragment {
             listener.onGearFragmentAction(ACTION_CLOSE, 0, (byte)0);
         else
             getActivity().getFragmentManager().beginTransaction().remove(this).commit();
+    }
+
+    public void update() {
+
+        powerSlider.setMinValue(gear.getMinPowerInt());
+        powerSlider.setMaxValue(gear.getMaxPowerInt());
+        powerSlider.setValue(gear.getPowerInt());
+        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
+        colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
+        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
     }
 
     public interface GearFragmentListener {

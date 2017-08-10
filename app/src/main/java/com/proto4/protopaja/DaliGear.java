@@ -132,7 +132,7 @@ public class DaliGear {
     }
 
     public void setPower(byte power) {
-        Log.d(TAG, "power=" + power);
+        Log.d(TAG, "power=" + (power < 0 ? power + 256 : power));
         data[DATA_POWER] = power;
         if (power > 0 && (data[DATA_STATUS] & STATUS_POWER_ON) == 0)
             data[DATA_STATUS] |= STATUS_POWER_ON;
@@ -177,7 +177,10 @@ public class DaliGear {
         return group != null;
     }
 
+
+    // returns true if gear was added
     public boolean addGroupMember(DaliGear gear) {
+        Log.d(TAG, "adding group member: " + gear.getName());
         if (group == null)
             group = new ArrayList<>();
         if (group.contains(gear))
@@ -186,12 +189,14 @@ public class DaliGear {
         return true;
     }
 
-    public void removeGroupMember(DaliGear gear){
+    // returns true if gear was removed
+    public boolean removeGroupMember(DaliGear gear){
         if (group == null)
-            return;
-        group.remove(gear);
+            return false;
+        boolean removed = group.remove(gear);
         if (group.size() == 0)
             group = null;
+        return removed;
     }
 
     public ArrayList<DaliGear> getGroup(){
@@ -204,7 +209,11 @@ public class DaliGear {
         byte status = data[DATA_STATUS];
         String info = "";
         info += "Power level = " + getPowerInt() + "\n";
+        info += "Power min = " + getDataByteInt(DATA_POWER_MIN) + "\n";
+        info += "Power max = " + getDataByteInt(DATA_POWER_MAX) + "\n";
         info += "Color temperature = " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
+        info += "Color coolest = " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
+        info += "Color warmest = " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";

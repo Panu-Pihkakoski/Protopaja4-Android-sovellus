@@ -91,6 +91,10 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             holder.brIcon.setVisibility(item.showCheckBox() ? View.GONE : View.VISIBLE);
             holder.brIcon.setColorFilter(item.getBrightnessColor());
             Log.d(TAG, "brightness=" + item.getBrightnessColor());
+        } else if (item.getType() == RecyclerListItem.TYPE_GROUP) {
+            holder.checkBox.setVisibility(View.GONE);
+            holder.tempIcon.setVisibility(View.GONE);
+            holder.brIcon.setVisibility(View.GONE);
         }
 
         if (position == listItems.size() - 1) {
