@@ -3,6 +3,8 @@ package com.proto4.protopaja.ui;
 
 import android.util.Log;
 
+import com.proto4.protopaja.DaliGear;
+
 public class RecyclerListItem {
 
     private static final String TAG = RecyclerListItem.class.getSimpleName();
@@ -40,6 +42,12 @@ public class RecyclerListItem {
         showTemperature = false;
         showExtraText = false;
         brightness = 0;
+    }
+
+    public static RecyclerListItem createGearItem(DaliGear gear) {
+        RecyclerListItem item = new RecyclerListItem(gear.getName(), gear.isGroup() ? TYPE_GROUP : TYPE_GEAR, gear.getId());
+        item.setBrightness((int)(gear.getPowerRatio()*255));
+        return item;
     }
 
     public int getBrightnessColor() {

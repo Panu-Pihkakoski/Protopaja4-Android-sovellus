@@ -161,8 +161,7 @@ public class ListFragment extends Fragment {
         if (expandedGroup != group) {
             for (int i = 0; i < gears.size(); i++) {
                 DaliGear g = gears.get(i);
-                listItems.add(++groupPosition,
-                        new RecyclerListItem(g.getName(), RecyclerListItem.TYPE_GEAR, g.getId()));
+                listItems.add(++groupPosition, RecyclerListItem.createGearItem(g));
             }
             expandedGroup = group;
         } else {

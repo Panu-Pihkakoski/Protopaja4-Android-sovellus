@@ -55,12 +55,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private TextView titleView;
 
-    private ListFragment listFragment;
-
     private FrameLayout fragmentLayout;
 
     private Fragment activeFragment;
     private GearFragment gearFragment;
+    private ListFragment listFragment;
 
     private BleManager bleManager;
     private BleScanner bleScanner;
@@ -136,8 +135,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public static final String UUID_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
     public static final String UUID_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     public static final String UUID_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-    public static final String UUID_DFU = "00001530-1212-EFDE-1523-785FEABCD123";
-
 
     public static final int TX_MAX_CHARS = 20;
 
@@ -244,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void setVisibleMenuGroups(byte flags) {
         if (overflowMenu == null) {
-            Log.w(TAG, "setVisibleMenuGroups(): overflow menu is null");
+            Log.w(TAG, "setVisibleMenuGroups(): overflowMenu==null");
             return;
         }
 
@@ -378,23 +375,20 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     // callback to handle gear fragment ui actions
     @Override
-    public void onGearFragmentAction(int which, int value, final byte gearId) {
+    public void onGearFragmentAction(int which, int value, final byte gearId, boolean isGroup) {
         if (which != GearFragment.ACTION_CLOSE && !gearMap.containsKey(gearId) && !groupMap.containsKey(gearId)) {
             Log.d(TAG, "onGearFragmentAction: gear id not valid");
             return;
         }
         Log.d(TAG, "onGearFragmentAction: gear id = " + gearId);
         switch (which) {
-            case GearFragment.ACTION_POWER: // set gear power on (value != 0) / off (value == 0)
-                //setGearPower(gearId, value != 0);
-                //if (value == 0) broadcastPowerOff();
-                break;
-            case GearFragment.ACTION_POWER_LEVEL: // set gear power level
-                if (value == 0) setGearPower(gearId, false);
-                else setGearPowerLevel(gearId, value);
+            case GearFragment.ACTION_POWER: // set gear/group power level
+                if (isGroup) setGroupPower(gearId, value);
+                else setGearPower(gearId, value);
                 break;
             case GearFragment.ACTION_COLOR_TEMP:
-                setGearColorTemperature(gearId, value);
+                if (isGroup) setGroupColorTemperature(gearId, value);
+                else setGearColorTemperature(gearId, value);
                 break;
             case GearFragment.ACTION_STEP: // not implemented
                 // step
@@ -435,10 +429,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 connect(item.getExtra()); // device address should be stored in item.extra
                 break;
             case ListFragment.ITEM_ACTION_OPEN:     // open gear fragment
-                if (gearMap.containsKey(item.getId()))
-                    showGearFragment(item.getId(), false);
-                else if (groupMap.containsKey(item.getId()))
-                    showGearFragment(item.getId(), true);
+                showGearFragment(item.getId(), item.getType() == RecyclerListItem.TYPE_GROUP);
                 break;
             case ListFragment.ITEM_ACTION_EXPAND:
                 DaliGear group = groupMap.get(item.getId());
@@ -469,34 +460,21 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-    // set power on/off for gear with id=gearId
-    private void setGearPower(byte gearId, boolean on) {
-        if (on) return; // no command to set power on... handled by setting gear power level
-        byte[] data;
-        if (gearId != NO_GEAR_DATA)
-            data = new byte[]{MESSAGE_TYPE_COMMAND, gearId, 1, DALI_COMMAND_OFF, MESSAGE_END};
-        else data = new byte[]{MESSAGE_TYPE_BROADCAST, DALI_COMMAND_OFF, MESSAGE_END};
-        sendData(data);
-    }
     // set power level for gear with id=gearId
-    private void setGearPowerLevel(byte gearId, int powerLevel) {
+    private void setGearPower(byte gearId, int powerLevel) {
         DaliGear g = gearMap.get(gearId);
-        if (g != null) {    // gear was found in gearMap
-            Log.d(TAG, "setGearPowerLevel(): setting power for gear " + gearId);
-            g.setPower((byte)powerLevel);
-            float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*255;
-            listFragment.getItemById(gearId).setBrightness((int)br);
-        } else {            // gear should be a group
-            DaliGear group = groupMap.get(gearId);
-            if (group == null) return;  // wasn't a group...
-            Log.d(TAG, "setGearPowerLevel(): setting power for group " + gearId);
-            group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
-            for (DaliGear gear : group.getGroup()) {
-                setGearPowerLevel(gear.getId(), powerLevel);
-            }
+        if (g == null) {
+            Log.w(TAG, "unable to set gear power: gear not found");
             return;
         }
 
+        Log.d(TAG, "setGearPowerLevel(): setting power for gear " + gearId);
+        g.setPower((byte)powerLevel);
+        float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*255;
+        listFragment.getItemById(gearId).setBrightness((int)br);
+
+
+        // send power level to central unit
         byte[] data;
         if (gearId != NO_GEAR_DATA)
             data = new byte[]{MESSAGE_TYPE_COMMAND, gearId, 0, (byte) powerLevel, MESSAGE_END};
@@ -504,10 +482,19 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         sendData(data);
     }
 
-    private void sendStatusQuery(byte gearId) {
-        Log.d(TAG, "Sending status query...");
-        byte[] data = {MESSAGE_TYPE_COMMAND, gearId, 1, DALI_COMMAND_QUERY_STATUS, MESSAGE_END};
-        sendData(data);
+    // calls setGearPower for every group member
+    private void setGroupPower(byte groupId, int powerLevel) {
+        DaliGear group = groupMap.get(groupId);
+        if (group == null) {
+            Log.w(TAG, "unable to set group power: group not found");
+            return;
+        }
+        group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
+        ArrayList<DaliGear> gears = group.getGroup();
+        for (int i = 0; i < gears.size(); i++) {
+            setGearPower(gears.get(i).getId(), powerLevel);
+        }
+
     }
 
     private void setGearColorTemperature(byte gearId, int colorTemp) {
@@ -519,6 +506,25 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         byte[] data;
         data = new byte[]{MESSAGE_TYPE_CTEMP, gearId, (byte)colorTemp, MESSAGE_END};
+        sendData(data);
+    }
+
+    private void setGroupColorTemperature(byte groupId, int colorTemp) {
+        DaliGear group = groupMap.get(groupId);
+        if (group == null) {
+            Log.w(TAG, "unable to set group color temperature: group not found");
+            return;
+        }
+        group.setDataByte(DaliGear.DATA_COLOR_TEMP, (byte)colorTemp);
+        ArrayList<DaliGear> gears = group.getGroup();
+        for (int i = 0; i < gears.size(); i++) {
+            setGearColorTemperature(gears.get(i).getId(), colorTemp);
+        }
+    }
+
+    private void sendStatusQuery(byte gearId) {
+        Log.d(TAG, "Sending status query...");
+        byte[] data = {MESSAGE_TYPE_COMMAND, gearId, 1, DALI_COMMAND_QUERY_STATUS, MESSAGE_END};
         sendData(data);
     }
 

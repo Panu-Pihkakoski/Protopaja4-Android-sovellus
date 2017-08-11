@@ -117,6 +117,12 @@ public class DaliGear {
         return name;
     }
 
+    public float getPowerRatio() {
+        float pr = (float)(getPowerInt() - getMinPowerInt())/(getMaxPowerInt() - getMinPowerInt());
+        Log.d(TAG, "getPowerRatio() returning " + Float.toString(pr));
+        return pr;
+    }
+
     // sets
     public void setData(byte[] _data) {
         for (int i = 0; i < DATA_LEN; i++)

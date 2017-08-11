@@ -42,13 +42,11 @@ public class GearFragment extends Fragment {
     private int powerLevel, lastPowerLevel, minPower, maxPower;
 
     public static final int ACTION_POWER = 0;
-    public static final int ACTION_POWER_LEVEL = 1;
     public static final int ACTION_STEP = 2;
     public static final int ACTION_QUERY = 3;
     public static final int ACTION_CLOSE = 4;
     public static final int ACTION_RENAME = 5;
     public static final int ACTION_COLOR_TEMP = 6;
-
 
     public GearFragment() {
         // Required empty public constructor
@@ -169,13 +167,13 @@ public class GearFragment extends Fragment {
         Log.d(TAG, "power set: " + power);
         powerLevel = power;
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_POWER_LEVEL, powerLevel, gear.getId());
+            listener.onGearFragmentAction(ACTION_POWER, powerLevel, gear.getId(), gear.isGroup());
     }
 
     public void onColorTempSet(int colorTemp) {
         Log.d(TAG, "color temp set: " + colorTemp);
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_COLOR_TEMP, colorTemp, gear.getId());
+            listener.onGearFragmentAction(ACTION_COLOR_TEMP, colorTemp, gear.getId(), gear.isGroup());
     }
 
     public void setGear(DaliGear _gear) {
@@ -199,7 +197,7 @@ public class GearFragment extends Fragment {
 
     private void renameGear() {
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_RENAME, 0, gear.getId());
+            listener.onGearFragmentAction(ACTION_RENAME, 0, gear.getId(), gear.isGroup());
     }
 
     public String getNewName() {
@@ -208,7 +206,7 @@ public class GearFragment extends Fragment {
 
     private void close() {
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_CLOSE, 0, (byte)0);
+            listener.onGearFragmentAction(ACTION_CLOSE, 0, (byte)0, false);
         else
             getActivity().getFragmentManager().beginTransaction().remove(this).commit();
     }
@@ -224,6 +222,6 @@ public class GearFragment extends Fragment {
     }
 
     public interface GearFragmentListener {
-        void onGearFragmentAction(int which, int value, byte gearId);
+        void onGearFragmentAction(int which, int value, byte gearId, boolean group);
     }
 }
