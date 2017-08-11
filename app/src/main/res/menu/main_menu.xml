@@ -2,20 +2,36 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item android:id="@+id/action_scan"
-        android:title="@string/action_scan"
-        app:showAsAction="never"/>
 
-    <item android:id="@+id/action_query"
-        android:title="status query"
-        app:showAsAction="never"/>
+    <group android:id="@+id/menu_group_main">
+        <item android:id="@+id/action_scan"
+            android:title="@string/action_scan"
+            app:showAsAction="never"/>
+    </group>
 
-    <item android:id="@+id/action_create_group"
-        android:title="@string/action_create_group"
-        app:showAsAction="always" />
+    <group android:id="@+id/menu_group_gear">
+        <item android:id="@+id/action_show_gear_info"
+            android:title="show info"
+            app:showAsAction="never" />
+    </group>
 
-    <item android:id="@+id/action_skip_connect"
-        android:title="skip connect"
-        app:showAsAction="never" />
+    <group android:id="@+id/menu_group_grouping">
+        <item android:id="@+id/action_create_group"
+            android:title="@string/action_create_group"
+            app:showAsAction="ifRoom" />
+        <item android:id="@+id/action_remove_from_group"
+            android:title="@string/action_remove_from_group"
+            app:showAsAction="ifRoom" />
+    </group>
+
+
+    <group android:id="@+id/menu_group_debug">
+        <item android:id="@+id/action_skip_connect"
+            android:title="skip connect"
+            app:showAsAction="never" />
+        <item android:id="@+id/action_query"
+            android:title="status query"
+            app:showAsAction="never"/>
+    </group>
 
 </menu>

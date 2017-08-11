@@ -57,7 +57,7 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
         lastDown = new float[]{0,0};
         holder = getHolder();
         holder.addCallback(this);
-        backgroundColor = 0xffa0a0b0;
+        backgroundColor = 0xffffffff;
         showPercentage = showValue = showKelvins = flipped = false;
         Log.d(TAG, "Surface initialized");
     }
@@ -115,6 +115,10 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
     public void setListener(Listener _listener) {
         Log.d(TAG, "setListener()");
         listener = _listener;
+    }
+
+    public void setSliderBackground(int color) {
+        backgroundColor = color;
     }
 
     @Override
@@ -232,11 +236,11 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
             // draw half circle
             canvas.drawArc(rect, VALUE_ARC_START, flipped ? 360 : 180, false, halfCirclePaint);
 
-            if (flipped) {
+            if (showKelvins) {
                 int c = 0xff000000;
-                int b = (int)(256*(value-minValue)/(maxValue-minValue));
+                int b = (int)(255*(value-minValue)/(maxValue-minValue));
                 int r = 255-b;
-                c += (b << 16) + r;
+                c += (r << 16) + b;
                 valueArcPaint.setColor(c);
             }
 

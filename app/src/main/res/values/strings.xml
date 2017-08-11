@@ -5,7 +5,7 @@
     <string name="action_stop_scan">Stop Scan</string>
     <string name="action_clear_results">Clear</string>
     <string name="action_create_group">Create group</string>
-
+    <string name="action_remove_from_group">Remove</string>
 
     <string name="action_navi_control">Control</string>
     <string name="action_navi_data">Data</string>

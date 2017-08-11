@@ -140,7 +140,7 @@ public class GearFragment extends Fragment {
         powerSlider.setMaxValue(gear.getMaxPowerInt());
         powerSlider.setValue(gear.getPowerInt());
         powerSlider.setShowPercentage(true);
-        //powerSlider.setVisibility(View.GONE);
+        powerSlider.setSliderBackground(activity.getResources().getColor(R.color.main_bg, null));
 
         colorTempSlider = activity.findViewById(R.id.color_temp_slider);
         colorTempSlider.setListener(new RoundSlider.Listener() {
@@ -154,6 +154,7 @@ public class GearFragment extends Fragment {
         colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
         colorTempSlider.setShowKelvins(true);
         colorTempSlider.setFlipped(true);
+        colorTempSlider.setSliderBackground(activity.getResources().getColor(R.color.main_bg, null));
 
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);

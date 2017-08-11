@@ -15,10 +15,11 @@ public class DaliGear {
     private String name;
     private ArrayList<DaliGear> group;
 
-    private byte[] data; // should be {id, status, power}
+    private byte[] data; // should be {id, status, power, ...}
 
-    public static final int DATA_LEN = 9;
+    public static final int DATA_LEN = 13;
 
+    // data byte index
     public static final int DATA_ID = 0;
     public static final int DATA_STATUS = 1;
     public static final int DATA_POWER = 2;
@@ -28,6 +29,11 @@ public class DaliGear {
     public static final int DATA_COLOR_TEMP = 6;
     public static final int DATA_COLOR_COOLEST = 7;
     public static final int DATA_COLOR_WARMEST = 8;
+    public static final int DATA_TEMP_INTERNAL = 9;
+    public static final int DATA_TEMP_INTERNAL2 = 10;
+    public static final int DATA_TEMP_EXTERNAL = 11;
+    public static final int DATA_TEMP_EXTERNAL2 = 12;
+
 
     public static final int STATUS_BALLAST_FAILURE = 1;
     public static final int STATUS_LAMP_FAILURE = 2;

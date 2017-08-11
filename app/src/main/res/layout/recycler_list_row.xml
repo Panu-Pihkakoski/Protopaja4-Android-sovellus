@@ -11,6 +11,7 @@
         android:id="@+id/relativeLayout">
 
         <RelativeLayout
+            android:id="@+id/list_row_boundaries"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#101010">

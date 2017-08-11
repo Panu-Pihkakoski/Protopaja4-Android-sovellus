@@ -36,6 +36,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         public TextView title;
         public CheckBox checkBox;
         public ImageView tempIcon, brIcon;
+        public RelativeLayout boundaries;
 
         public ViewHolder(View view) {
             super(view);
@@ -43,11 +44,14 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             checkBox = (CheckBox) view.findViewById(R.id.list_item_checkbox);
             checkBox.setChecked(false);
             checkBox.setVisibility(View.GONE);
+            //checkBox.setEnabled(false);
+            checkBox.setClickable(false);
             tempIcon = view.findViewById(R.id.list_item_temp_icon);
             tempIcon.setVisibility(View.GONE);
             brIcon = view.findViewById(R.id.list_item_brightness_icon);
             brIcon.setVisibility(View.GONE);
             brIcon.setColorFilter(0xffa0a0f0);
+            boundaries = view.findViewById(R.id.list_row_boundaries);
         }
     }
 
@@ -83,7 +87,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                 break;
         }
         int titleColor = context.getResources().getColor(colorId, null);
-        holder.title.setTextColor(titleColor);
+        //holder.title.setTextColor(titleColor);
+        holder.boundaries.setBackgroundColor(titleColor);
         if (item.getType() == RecyclerListItem.TYPE_GEAR) {
             holder.checkBox.setVisibility(item.showCheckBox() ? View.VISIBLE : View.GONE);
             holder.checkBox.setChecked(item.isChecked());

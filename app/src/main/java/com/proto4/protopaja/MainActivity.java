@@ -51,6 +51,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private Toolbar toolbar;
     private ProgressBar progressBar;
 
+    private Menu overflowMenu;
+
     private TextView titleView;
 
     private ListFragment listFragment;
@@ -78,6 +80,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private static final String DEVICE_ADDRESS = "DEVICE_ADDRESS";
     private static final String AUTO_CONNECT = "AUTO_CONNECT";
+
+
+    private static final byte F_MENU_MAIN = 1;
+    private static final byte F_MENU_GEAR = 2;
+    private static final byte F_MENU_GEAR_SELECTION = 4;
+    private static final byte F_MENU_DEBUG = 8;
+
+
 
     private static final byte NO_GEAR_DATA = (byte)255;
 
@@ -140,6 +150,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         toolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
 
+
+
         // progress bar on toolbar, visible while scanning / connecting
         progressBar = (ProgressBar) findViewById(R.id.main_toolbar_progress_bar);
         progressBar.setVisibility(View.GONE);
@@ -192,8 +204,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d(TAG, "onCreateOptionsMenu()");
+        overflowMenu = menu;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main_menu, menu);
+        setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
         return true;
     }
 
@@ -209,13 +224,34 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             case R.id.action_create_group:
                 addCheckedItemsToGroup((byte)255);
                 return true;
+            case R.id.action_remove_from_group:
+                if (listFragment == null) {
+                    Log.d(TAG, "action_remove_from_group: listFragment == null");
+                    return true; // false?
+                }
+                byte groupId = listFragment.getExpandedGroupId();
+                removeCheckedItemsFromGroup(groupId);
+                return true;
             case R.id.action_skip_connect:
                 skipConnect = true;
+                stopScan();
                 onConnected();
             default:
                 return super.onOptionsItemSelected(item);
         }
 
+    }
+
+    private void setVisibleMenuGroups(byte flags) {
+        if (overflowMenu == null) {
+            Log.w(TAG, "setVisibleMenuGroups(): overflow menu is null");
+            return;
+        }
+
+        overflowMenu.setGroupVisible(R.id.menu_group_main, (flags & F_MENU_MAIN) != 0);
+        overflowMenu.setGroupVisible(R.id.menu_group_gear, (flags & F_MENU_GEAR) != 0);
+        overflowMenu.setGroupVisible(R.id.menu_group_grouping, (flags & F_MENU_GEAR_SELECTION) != 0);
+        overflowMenu.setGroupVisible(R.id.menu_group_debug, (flags & F_MENU_DEBUG) != 0);
     }
 
     // request location permissions if needed
@@ -389,7 +425,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     // list fragment interaction
     @Override
     public void onListFragmentAction(int which, RecyclerListItem item) {
-        Log.d(TAG, "onListFragmentAction(which=" + which + ", item=\"" + item.getTitle() + "\")");
+        String itemTitle = "null";
+        if (item != null)
+            itemTitle = item.getTitle();
+        Log.d(TAG, "onListFragmentAction(which=" + which + ", item=\"" + itemTitle + "\")");
         switch (which) {
             case ListFragment.ITEM_ACTION_CONNECT:  // connect to bt device
                 stopScan(); // stops ble scan if running
@@ -411,6 +450,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                         listFragment.update();
                     }
                 });
+                break;
+            case ListFragment.ACTION_SELECTION_START:
+                setVisibleMenuGroups(F_MENU_GEAR_SELECTION);
+                break;
+            case ListFragment.ACTION_SELECTION_END:
+                setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
                 break;
             case ListFragment.ACTION_GROUP_SELECTED:
                 addCheckedItemsToGroup(item.getId());
@@ -437,12 +482,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void setGearPowerLevel(byte gearId, int powerLevel) {
         DaliGear g = gearMap.get(gearId);
         if (g != null) {    // gear was found in gearMap
+            Log.d(TAG, "setGearPowerLevel(): setting power for gear " + gearId);
             g.setPower((byte)powerLevel);
-            float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*256;
+            float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*255;
             listFragment.getItemById(gearId).setBrightness((int)br);
         } else {            // gear should be a group
             DaliGear group = groupMap.get(gearId);
             if (group == null) return;  // wasn't a group...
+            Log.d(TAG, "setGearPowerLevel(): setting power for group " + gearId);
             group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
             for (DaliGear gear : group.getGroup()) {
                 setGearPowerLevel(gear.getId(), powerLevel);
@@ -542,6 +589,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
         if (newGroup) {
+            Log.d(TAG, "adding new group with id=" + groupId);
             groupMap.put(groupId, group);
             final RecyclerListItem item = new RecyclerListItem("New group [" + groupId + "]",
                     RecyclerListItem.TYPE_GROUP, groupId);

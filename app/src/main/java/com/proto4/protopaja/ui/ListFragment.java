@@ -42,6 +42,9 @@ public class ListFragment extends Fragment {
 
     public static final int ACTION_GROUP_SELECTED = 5;
     public static final int ACTION_EXPANDED_GROUP_SELECTED = 6;
+    public static final int ACTION_SELECTION_START = 7;
+    public static final int ACTION_SELECTION_END = 8;
+
 
     public ListFragment() {
 
@@ -93,6 +96,9 @@ public class ListFragment extends Fragment {
 
     public void clearSelection() {
         Log.d(TAG, "clearSelection()");
+        if (listener != null) {
+            listener.onListFragmentAction(ACTION_SELECTION_END, null);
+        }
         isSelecting = false;
         selectedItems.clear();
         RecyclerListItem item;
@@ -109,6 +115,7 @@ public class ListFragment extends Fragment {
             if (item.getId() == id)
                 return item;
         }
+        Log.w(TAG, "getItemById(): item not found");
         return null;
     }
 
@@ -177,6 +184,8 @@ public class ListFragment extends Fragment {
 
     private void startSelection(int position) {
         Log.d(TAG, "startSelection(position=" + position + ")");
+        if (listener != null)
+            listener.onListFragmentAction(ACTION_SELECTION_START, null);
         RecyclerListItem item;
         isSelecting = true;
         for (int i = 0; i < listItems.size(); i++) {
@@ -222,6 +231,12 @@ public class ListFragment extends Fragment {
         listItems.remove(expandedGroup);
         expandedGroup = null;
         recyclerView.getAdapter().notifyDataSetChanged();
+    }
+
+    public byte getExpandedGroupId() {
+        if (expandedGroup == null)
+            return (byte)255;
+        return expandedGroup.getId();
     }
 
     @Override
