@@ -15,8 +15,6 @@ import android.os.Build;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -30,21 +28,18 @@ import android.widget.TextView;
 import com.proto4.protopaja.ble.BleManager;
 import com.proto4.protopaja.ble.BleScanner;
 import com.proto4.protopaja.ui.GearFragment;
-import com.proto4.protopaja.ui.ItemClickSupport;
-import com.proto4.protopaja.ui.ListFragment;
-import com.proto4.protopaja.ui.RecyclerListAdapter;
-import com.proto4.protopaja.ui.RecyclerListItem;
+import com.proto4.protopaja.ui.GearListFragment;
+import com.proto4.protopaja.ui.GearListItem;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements BleScanner.ScanListener,
                 BleManager.BleManagerListener, GearFragment.GearFragmentListener,
-                ListFragment.ListFragmentListener {
+                /*ListFragment.ListFragmentListener,*/ GearListFragment.Listener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -59,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private Fragment activeFragment;
     private GearFragment gearFragment;
-    private ListFragment listFragment;
+    private GearListFragment gearListFragment;
 
     private BleManager bleManager;
     private BleScanner bleScanner;
@@ -173,9 +168,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         // layout for holding fragments
         fragmentLayout = (FrameLayout) findViewById(R.id.main_fragment_content);
         fragmentLayout.setVisibility(View.VISIBLE);
-        listFragment = new ListFragment();
-        listFragment.setListener(this);
-        showListFragment();
+
+        gearListFragment = GearListFragment.newInstance();
+        gearListFragment.setListener(this);
 
         // bleManager provides bluetooth methods
         bleManager = new BleManager(this, this);
@@ -222,12 +217,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 addCheckedItemsToGroup((byte)255);
                 return true;
             case R.id.action_remove_from_group:
-                if (listFragment == null) {
-                    Log.d(TAG, "action_remove_from_group: listFragment == null");
-                    return true; // false?
+                if (gearListFragment == null) {
+                    Log.d(TAG, "options item action: remove from group: gearListFragment==null");
+                    return true;
                 }
-                byte groupId = listFragment.getExpandedGroupId();
-                removeCheckedItemsFromGroup(groupId);
+                byte groupId = gearListFragment.getExpandedGroupId();
+                if (groupId == NO_GEAR_DATA)
+                    Log.d(TAG, "options item action: remove from group: cannot remove from base group");
+                else removeCheckedItemsFromGroup(groupId);
                 return true;
             case R.id.action_skip_connect:
                 skipConnect = true;
@@ -354,23 +351,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         activeFragment = gearFragment;
     }
 
-    private void showListFragment() {
-        Log.d(TAG, "showListFragment()");
-        if (listFragment == null) {
-            Log.d(TAG, "showListFragment(): listFragment was null");
-            listFragment = ListFragment.newInstance(this);
-            listFragment.setListener(this);
+    private void showGearListFragment() {
+        if (gearListFragment == null) {
+            gearListFragment = GearListFragment.newInstance();
+            gearListFragment.setListener(this);
         }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                titleView.setText("");
-            }
-        });
         getFragmentManager().beginTransaction()
-                .replace(R.id.main_fragment_content, listFragment)
-                .commit(); // sets list fragment on fragment container
-        activeFragment = listFragment;
+                .replace(R.id.main_fragment_content, gearListFragment)
+                .commit(); // sets gear list fragment on fragment container
+        activeFragment = gearListFragment;
     }
 
     // callback to handle gear fragment ui actions
@@ -394,19 +383,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 // step
                 break;
             case GearFragment.ACTION_CLOSE: // close the fragment (show list fragment)
-                showListFragment();
+                //showListFragment();
+                showGearListFragment();
                 break;
             case GearFragment.ACTION_RENAME: // rename gear
                 final String newName = gearFragment.getNewName(); // get new name from fragment
-                DaliGear gear;
-                gear = gearMap.get(gearId); // set name
-                if (gear == null)
-                    gear = groupMap.get(gearId);
-                gear.setName(newName);
+                if (isGroup) groupMap.get(gearId).setName(newName);
+                else gearMap.get(gearId).setName(newName);
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        listFragment.renameItem(gearId, newName);
+                        //listFragment.renameItem(gearId, newName);
                         titleView.setText(newName); // update title
                     }
                 });
@@ -416,46 +404,27 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-    // list fragment interaction
     @Override
-    public void onListFragmentAction(int which, RecyclerListItem item) {
-        String itemTitle = "null";
-        if (item != null)
-            itemTitle = item.getTitle();
-        Log.d(TAG, "onListFragmentAction(which=" + which + ", item=\"" + itemTitle + "\")");
+    public void onGearListFragmentAction(int which, GearListItem item) {
+        DaliGear gear = item == null ? null : item.getGear();
         switch (which) {
-            case ListFragment.ITEM_ACTION_CONNECT:  // connect to bt device
-                stopScan(); // stops ble scan if running
-                connect(item.getExtra()); // device address should be stored in item.extra
+            case GearListFragment.ITEM_ACTION_OPEN:
+                showGearFragment(gear.getId(), gear.isGroup());
                 break;
-            case ListFragment.ITEM_ACTION_OPEN:     // open gear fragment
-                showGearFragment(item.getId(), item.getType() == RecyclerListItem.TYPE_GROUP);
+            case GearListFragment.ACTION_GROUP_SELECTED:
+                addCheckedItemsToGroup(gear.getId());
                 break;
-            case ListFragment.ITEM_ACTION_EXPAND:
-                DaliGear group = groupMap.get(item.getId());
-                if (group == null) break;
-                listFragment.expandGroup(item, group.getGroup());
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        listFragment.update();
-                    }
-                });
+            case GearListFragment.ACTION_EXPANDED_GROUP_SELECTED:
+                removeCheckedItemsFromGroup(gear.getId());
                 break;
-            case ListFragment.ACTION_SELECTION_START:
+            case GearListFragment.ACTION_SELECTION_START:
                 setVisibleMenuGroups(F_MENU_GEAR_SELECTION);
                 break;
-            case ListFragment.ACTION_SELECTION_END:
+            case GearListFragment.ACTION_SELECTION_END:
                 setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
                 break;
-            case ListFragment.ACTION_GROUP_SELECTED:
-                addCheckedItemsToGroup(item.getId());
-                break;
-            case ListFragment.ACTION_EXPANDED_GROUP_SELECTED:
-                removeCheckedItemsFromGroup(item.getId());
-                break;
             default:
-                Log.d(TAG, "unknown list fragment action");
+                Log.d(TAG, "unknown gear list fragment action");
                 break;
         }
     }
@@ -470,9 +439,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         Log.d(TAG, "setGearPowerLevel(): setting power for gear " + gearId);
         g.setPower((byte)powerLevel);
-        float br = (float)(powerLevel-g.getMinPowerInt())/(g.getMaxPowerInt()-g.getMinPowerInt())*255;
-        listFragment.getItemById(gearId).setBrightness((int)br);
-
 
         // send power level to central unit
         byte[] data;
@@ -482,7 +448,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         sendData(data);
     }
 
-    // calls setGearPower for every group member
+    // calls setGearPower for each group member
     private void setGroupPower(byte groupId, int powerLevel) {
         DaliGear group = groupMap.get(groupId);
         if (group == null) {
@@ -504,11 +470,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         gear.setDataByte(DaliGear.DATA_COLOR_TEMP, (byte)colorTemp);
 
+        // send color temperature to central unit
         byte[] data;
         data = new byte[]{MESSAGE_TYPE_CTEMP, gearId, (byte)colorTemp, MESSAGE_END};
         sendData(data);
     }
 
+    // calls setGearColorTemperature for each group member
     private void setGroupColorTemperature(byte groupId, int colorTemp) {
         DaliGear group = groupMap.get(groupId);
         if (group == null) {
@@ -533,25 +501,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         sendData(msg);
     }
 
-    /*
-    // not needed anymore...
-    private void defineGroup(byte groupId) {
-        DaliGear group = groupMap.get(groupId);
-        if (group == null) {
-            Log.w(TAG, "unable to define group with id=" + groupId);
-            return;
-        }
-
-        ArrayList<DaliGear> list = group.getGroup();
-        byte[] msg = new byte[3 + list.size()];
-        msg[0] = MESSAGE_TYPE_GROUP;
-        msg[1] = groupId;
-        for (int i = 0; i < list.size(); i++) {
-            msg[i+2] = list.get(i).getId();
-        }
-        msg[msg.length-1] = MESSAGE_END;
-        sendData(msg);
-    }*/
+    // methods for manipulating groups
 
     private void addCheckedItemsToGroup(byte groupId) {
 
@@ -577,9 +527,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             group.setId(groupId);
         }
 
-        // get selected items from list fragment and add to group
-        for (RecyclerListItem item : listFragment.getSelectedItems()) {
-            DaliGear gear = gearMap.get(item.getId());
+        for (GearListItem item : gearListFragment.getSelectedItems()) {
+            //DaliGear gear = gearMap.get(item.getGear().getId());
+            DaliGear gear = item.getGear();
             if (gear != null) {
                 baseGroup.addGroupMember(gear);
                 if (group.addGroupMember(gear)) {
@@ -597,22 +547,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (newGroup) {
             Log.d(TAG, "adding new group with id=" + groupId);
             groupMap.put(groupId, group);
-            final RecyclerListItem item = new RecyclerListItem("New group [" + groupId + "]",
-                    RecyclerListItem.TYPE_GROUP, groupId);
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    listFragment.addItem(item);
-                }
-            });
+            gearListFragment.addItem(group);
         }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                listFragment.clearSelection();
+                gearListFragment.clearSelection();
             }
         });
+
     }
 
     private void removeCheckedItemsFromGroup(byte groupId) {
@@ -623,8 +566,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
 
-        for (RecyclerListItem item : listFragment.getSelectedItems()) {
-            DaliGear gear = gearMap.get(item.getId());
+        for (GearListItem item : gearListFragment.getSelectedItems()) {
+            DaliGear gear = item.getGear();
             if (gear == null) continue;
             if (group.removeGroupMember(gear)) {
                 Log.d(TAG, "sending group message: remove member");
@@ -633,6 +576,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 sendData(bytes);
             }
         }
+
         final boolean groupEmpty;
         if (!group.isGroup()) {
             groupMap.remove(groupId);
@@ -641,10 +585,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (groupEmpty)
-                    listFragment.removeExpandedGroup();
-                listFragment.removeSelectedItems();
-                listFragment.clearSelection();
+                if (groupEmpty) gearListFragment.removeExpandedGroup();
+                gearListFragment.removeSelectedItems();
+                gearListFragment.clearSelection();
             }
         });
     }
@@ -667,12 +610,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             toUpdate = new DaliGear(gearName, gearId);
             gearMap.put(gearId, toUpdate);
             groupMap.get(NO_GEAR_DATA).addGroupMember(toUpdate);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    listFragment.addItem(gearName, RecyclerListItem.TYPE_GEAR, gearId);
-                }
-            });
         } else {
             Log.d(TAG, "setting constants for existing gear");
         }
@@ -700,12 +637,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             toUpdate = new DaliGear(gearName, gearId);
             gearMap.put(gearId, toUpdate);
             groupMap.get(NO_GEAR_DATA).addGroupMember(toUpdate);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    listFragment.addItem(gearName, RecyclerListItem.TYPE_GEAR, gearId);
-                }
-            });
         } else {
             Log.d(TAG, "updating existing gear");
         }
@@ -715,7 +646,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (activeFragment == gearFragment) {
+                if (activeFragment == gearFragment && gearFragment != null) {
                     gearFragment.update();
                 }
             }
@@ -748,18 +679,17 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
 
         foundDevices.add(device);
-        final RecyclerListItem item = new RecyclerListItem(device.getName() != null ?
-                device.getName() : device.getAddress(), device.getAddress(), RecyclerListItem.TYPE_BT_DEVICE);
+
+
         final BluetoothDevice d = device;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                listFragment.addItem(d.getName() != null ?
-                        d.getName() : d.getAddress(), d.getAddress(), RecyclerListItem.TYPE_BT_DEVICE, (byte)0);
-                if (foundDevices.size() == 1)
-                    titleView.setText("Scanned devices");
+                titleView.setText(foundDevices.size() + " devices found");
             }
         });
+
+        // TODO: show list of found devices
     }
 
     @Override
@@ -797,16 +727,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         groupMap.clear();
 
         // add group to hold all gears
-        DaliGear g = new DaliGear("All");
+        final DaliGear g = new DaliGear("All");
         g.setId(NO_GEAR_DATA);
         groupMap.put(NO_GEAR_DATA, g);
-        final RecyclerListItem item = new RecyclerListItem("All", RecyclerListItem.TYPE_GROUP, NO_GEAR_DATA);
 
+        showGearListFragment();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                listFragment.clear();
-                listFragment.addItem(item);
+                gearListFragment.addItem(g);
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
                 titleView.setText("Connected");
@@ -915,11 +844,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (!bleScanner.isReady())
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
         foundDevices.clear();
-        showListFragment();
+
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                listFragment.clear();
                 titleView.setText("No devices");
                 progressBar.setVisibility(View.VISIBLE);
                 toolbar.setTitle("Scanning...");

@@ -17,28 +17,26 @@ import com.proto4.protopaja.R;
 import java.util.ArrayList;
 
 /**
- * Created by user on 1.08.17.
+ * Created by user on 12.08.17.
  */
 
-public class ListFragment extends Fragment {
 
-    private static final String TAG = ListFragment.class.getSimpleName();
+public class GearListFragment extends Fragment {
 
-    private ArrayList<RecyclerListItem> listItems;
-    private ArrayList<RecyclerListItem> selectedItems;
+    private static final String TAG = GearListFragment.class.getSimpleName();
+
+    private ArrayList<GearListItem> listItems;
+    private ArrayList<GearListItem> selectedItems;
     private RecyclerView recyclerView;
 
-    private RecyclerListItem expandedGroup;
+    private GearListItem expandedGroup;
 
     private boolean isSelecting;
 
-    private ListFragmentListener listener;
+    private Listener listener;
 
 
     public static final int ITEM_ACTION_OPEN = 1;
-    public static final int ITEM_ACTION_CONNECT = 2;
-    public static final int ITEM_ACTION_SELECT = 3;
-    public static final int ITEM_ACTION_EXPAND = 4;
 
     public static final int ACTION_GROUP_SELECTED = 5;
     public static final int ACTION_EXPANDED_GROUP_SELECTED = 6;
@@ -46,110 +44,64 @@ public class ListFragment extends Fragment {
     public static final int ACTION_SELECTION_END = 8;
 
 
-    public ListFragment() {
+    public GearListFragment() {
 
     }
 
-    public static ListFragment newInstance(Context context) {
-        ListFragment fragment = new ListFragment();
+    public static GearListFragment newInstance() {
+        GearListFragment fragment = new GearListFragment();
         fragment.listItems = new ArrayList<>();
         fragment.selectedItems = new ArrayList<>();
         fragment.isSelecting = false;
         return fragment;
     }
 
-    public void addItem(RecyclerListItem item) {
-        Log.d(TAG, "adding item to list (" + item.getTitle() + ")");
-        listItems.add(item);
-        Log.d(TAG, "listItems.size()==" + listItems.size());
-        //recyclerView.getAdapter().notifyItemInserted(listItems.size()-1);
-        recyclerView.getAdapter().notifyDataSetChanged();
-    }
-
-    public void addItem(String title, int type, byte id) {
-        addItem(new RecyclerListItem(title, type, id));
-    }
-
-    public void addItem(String title, String extra, int type, byte id) {
-        addItem(new RecyclerListItem(title, extra, type, id));
+    public void addItem(DaliGear gear) {
+        listItems.add(new GearListItem(gear));
     }
 
     public void clear() {
-        if (listItems == null) {
-            Log.d(TAG, "tried to clear null list");
-            listItems = new ArrayList<>();
-            return;
-        }
-        if (listItems.isEmpty())
-            Log.d(TAG, "listItems was empty");
-        else listItems.clear();
-        if (selectedItems == null) {
-            Log.d(TAG, "tried to clear null list (selectedItems)");
-            selectedItems = new ArrayList<>();
-            return;
-        }
-        if (selectedItems.isEmpty())
-            Log.d(TAG, "selectedItems was empty");
-        else selectedItems.clear();
+        listItems.clear();
+        selectedItems.clear();
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
     public void clearSelection() {
         Log.d(TAG, "clearSelection()");
         if (listener != null) {
-            listener.onListFragmentAction(ACTION_SELECTION_END, null);
+            listener.onGearListFragmentAction(ACTION_SELECTION_END, null);
         }
         isSelecting = false;
         selectedItems.clear();
-        RecyclerListItem item;
+        GearListItem item;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
-            item.showCheckBox(false);
+            item.setCheckBoxVisible(false);
             item.setChecked(false);
             recyclerView.getAdapter().notifyItemChanged(i);
         }
     }
 
-    public RecyclerListItem getItemById(byte id) {
-        for (RecyclerListItem item : listItems) {
-            if (item.getId() == id)
-                return item;
-        }
-        Log.w(TAG, "getItemById(): item not found");
-        return null;
-    }
-
-    public ArrayList<RecyclerListItem> getSelectedItems() {
+    public ArrayList<GearListItem> getSelectedItems() {
         Log.d(TAG, "getSelectedItems() returning " + selectedItems.size() + " items");
         return selectedItems;
     }
 
-    public void setListener(ListFragmentListener _listener) {
+    public void setListener(Listener _listener) {
         listener = _listener;
-    }
-
-    public void renameItem(byte itemId, String newName) {
-        for (int i = 0; i < listItems.size(); i++) {
-            if (listItems.get(i).getId() == itemId) {
-                Log.d(TAG, "Renaming item with id " + itemId);
-                listItems.get(i).setTitle(newName);
-                recyclerView.getAdapter().notifyItemChanged(i);
-                break;
-            }
-        }
     }
 
     public void update() {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    public void expandGroup(RecyclerListItem group, ArrayList<DaliGear> gears) {
-
-        ArrayList<RecyclerListItem> toRemove = new ArrayList<>();
+    public void expandGroup(GearListItem group) {
+        Log.d(TAG, "expandGroup()");
+        ArrayList<GearListItem> toRemove = new ArrayList<>();
         int groupPosition = -1;
         for (int i = 0; i < listItems.size(); i++) {
-            RecyclerListItem item = listItems.get(i);
-            if (item.getType() == RecyclerListItem.TYPE_GEAR)
+            GearListItem item = listItems.get(i);
+            if (!item.isGroup())
                 toRemove.add(item);
             else if (item == group)
                 groupPosition = i;
@@ -159,50 +111,45 @@ public class ListFragment extends Fragment {
             return;
         }
         if (expandedGroup != group) {
+            ArrayList<DaliGear> gears = group.getGear().getGroup();
             for (int i = 0; i < gears.size(); i++) {
                 DaliGear g = gears.get(i);
-                listItems.add(++groupPosition, RecyclerListItem.createGearItem(g));
+                listItems.add(++groupPosition, new GearListItem(g));
+                Log.d(TAG, "added list item on expand");
             }
             expandedGroup = group;
         } else {
+            Log.d(TAG, "group was already expanded");
             expandedGroup = null;
         }
 
         for (int i = 0; i < toRemove.size(); i++) {
             listItems.remove(toRemove.get(i));
         }
-
-    }
-
-    private void toggleShowGroupMembers(int position) {
-        Log.d(TAG, "toggleShowGroupMembers(position=" + position + ")");
-        RecyclerListItem item = listItems.get(position);
-        item.showExtraText(!item.showExtraText());
-        recyclerView.getAdapter().notifyItemChanged(position);
+        update();
     }
 
     private void startSelection(int position) {
         Log.d(TAG, "startSelection(position=" + position + ")");
         if (listener != null)
-            listener.onListFragmentAction(ACTION_SELECTION_START, null);
-        RecyclerListItem item;
+            listener.onGearListFragmentAction(ACTION_SELECTION_START, null);
+        GearListItem item;
         isSelecting = true;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
-            if (item.getType() == RecyclerListItem.TYPE_GEAR) {
-                item.showCheckBox(true);
+            if (!item.isGroup()) {
+                item.setCheckBoxVisible(true);
                 if (i == position)
                     selectedItems.add(item);    // add long clicked item to selectedItems
                 item.setChecked(i == position); // check long clicked item
                 recyclerView.getAdapter().notifyItemChanged(i);
             }
         }
-        Log.d(TAG, "selectedItems.size()==" + selectedItems.size());
     }
 
     private void select(int position) {
         Log.d(TAG, "select(" + position + ")");
-        RecyclerListItem item = listItems.get(position);
+        GearListItem item = listItems.get(position);
         item.setChecked(!item.isChecked());   // toggle select
         recyclerView.getAdapter().notifyItemChanged(position);
         if (item.isChecked())
@@ -211,9 +158,11 @@ public class ListFragment extends Fragment {
             selectedItems.remove(item);
         if (selectedItems.isEmpty())
             clearSelection();
+
+        // DEBUG
         String si = "";
-        for (RecyclerListItem i : selectedItems) {
-            si += i.getTitle() + "\n";
+        for (GearListItem i : selectedItems) {
+            si += i.getGear().getName() + "\n";
         }
         Log.d(TAG, "selectedItems (" + selectedItems.size() + "):\n" + si);
     }
@@ -235,7 +184,7 @@ public class ListFragment extends Fragment {
     public byte getExpandedGroupId() {
         if (expandedGroup == null)
             return (byte)255;
-        return expandedGroup.getId();
+        return expandedGroup.getGear().getId();
     }
 
     @Override
@@ -263,7 +212,7 @@ public class ListFragment extends Fragment {
             Log.d(TAG, "listItems was null");
             listItems = new ArrayList<>();
         }
-        recyclerView.setAdapter(new RecyclerListAdapter(activity, listItems));
+        recyclerView.setAdapter(new GearListAdapter(activity, listItems));
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
 
         // set on item click listener for recycler list items
@@ -275,27 +224,20 @@ public class ListFragment extends Fragment {
                     Log.w(TAG, "list index out of bounds (" + position + ")");
                     return;
                 }
-                final RecyclerListItem item = listItems.get(position);
+                final GearListItem item = listItems.get(position);
                 if (isSelecting) {
-                    if (item.getType() == RecyclerListItem.TYPE_GEAR)
-                        select(position);
-                    else if (item.getType() == RecyclerListItem.TYPE_GROUP) {
+                    if (item.isGroup()) {
                         if (listener != null)
-                            listener.onListFragmentAction((item == expandedGroup) ?
+                            listener.onGearListFragmentAction((item == expandedGroup) ?
                                     ACTION_EXPANDED_GROUP_SELECTED : ACTION_GROUP_SELECTED, item);
+                    } else {
+                        select(position);
                     }
                     return;
                 }
-                if (item.getType() == RecyclerListItem.TYPE_BT_DEVICE) { // connect to address in item extra
-                    if (listener != null)
-                        listener.onListFragmentAction(ITEM_ACTION_CONNECT, item);
-                } else if (item.getType() == RecyclerListItem.TYPE_GEAR ||
-                                item.getType() == RecyclerListItem.TYPE_GROUP) { // open gear fragment
-                    if (listener != null)
-                        listener.onListFragmentAction(ITEM_ACTION_OPEN, item);
-                }/* else if (item.getAction() == ITEM_ACTION_EXPAND) {
+                if (listener != null)
+                    listener.onGearListFragmentAction(ITEM_ACTION_OPEN, item);
 
-                }*/
             }
         });
 
@@ -304,23 +246,22 @@ public class ListFragment extends Fragment {
             public boolean onItemLongClicked(final RecyclerView recyclerView, int position, View v) {
                 Log.d(TAG, "on list item long clicked");
 
-                final RecyclerListItem item = listItems.get(position);
-                if (item.getType() == RecyclerListItem.TYPE_BT_DEVICE || isSelecting) // doesn't react to long click
+                final GearListItem item = listItems.get(position);
+                if (isSelecting) // doesn't react to long click
                     return false;
-                if (item.getType() == RecyclerListItem.TYPE_GEAR) { // start selecting items
+                if (item.isGroup()) {
+                    Log.d(TAG, "long clicked group");
+                    expandGroup(item);
+                } else {
+                    Log.d(TAG, "long clicked gear");
                     startSelection(position);
-                } else if (item.getType() == RecyclerListItem.TYPE_GROUP) {
-                    //toggleShowGroupMembers(position);
-                    if (listener != null) {
-                        listener.onListFragmentAction(ITEM_ACTION_EXPAND, item);
-                    }
                 }
                 return true;
             }
         });
     }
 
-    public interface ListFragmentListener {
-        void onListFragmentAction(int which, RecyclerListItem item);
+    public interface Listener {
+        void onGearListFragmentAction(int which, GearListItem item);
     }
 }

@@ -49,6 +49,7 @@
                 android:layout_alignBottom="@+id/list_row_title"
                 android:layout_alignParentEnd="true" />
 
+            <!--
             <ImageView
                 android:id="@+id/list_item_temp_icon"
                 android:contentDescription="@string/temp_icon_desc"
@@ -57,7 +58,7 @@
                 android:src="@drawable/temp_icon"
                 android:layout_alignTop="@+id/list_item_brightness_icon"
                 android:layout_toStartOf="@+id/list_item_brightness_icon" />
-
+            -->
 
 
         </RelativeLayout>
