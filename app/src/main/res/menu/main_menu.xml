@@ -9,12 +9,6 @@
             app:showAsAction="never"/>
     </group>
 
-    <group android:id="@+id/menu_group_gear">
-        <item android:id="@+id/action_show_gear_info"
-            android:title="show info"
-            app:showAsAction="never" />
-    </group>
-
     <group android:id="@+id/menu_group_grouping">
         <item android:id="@+id/action_create_group"
             android:title="@string/action_create_group"
@@ -22,6 +16,16 @@
         <item android:id="@+id/action_remove_from_group"
             android:title="@string/action_remove_from_group"
             app:showAsAction="ifRoom" />
+    </group>
+
+
+    <group android:id="@+id/menu_group_gear_fragment">
+        <item android:id="@+id/action_rename_gear"
+            android:title="Rename"
+            app:showAsAction="never" />
+        <item android:id="@+id/action_show_gear_info"
+            android:title="Info/Control"
+            app:showAsAction="never" />
     </group>
 
 

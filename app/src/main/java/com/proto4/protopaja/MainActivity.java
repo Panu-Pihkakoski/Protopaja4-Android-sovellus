@@ -28,8 +28,8 @@ import android.widget.TextView;
 import com.proto4.protopaja.ble.BleManager;
 import com.proto4.protopaja.ble.BleScanner;
 import com.proto4.protopaja.ui.GearFragment;
-import com.proto4.protopaja.ui.GearListFragment;
-import com.proto4.protopaja.ui.GearListItem;
+import com.proto4.protopaja.ui.ListFragment;
+import com.proto4.protopaja.ui.ProtoListItem;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -38,8 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements BleScanner.ScanListener,
-                BleManager.BleManagerListener, GearFragment.GearFragmentListener,
-                /*ListFragment.ListFragmentListener,*/ GearListFragment.Listener {
+                BleManager.BleManagerListener, GearFragment.GearFragmentListener, ListFragment.Listener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -48,13 +47,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private Menu overflowMenu;
 
-    private TextView titleView;
+    private TextView infoTextView;
 
     private FrameLayout fragmentLayout;
 
     private Fragment activeFragment;
     private GearFragment gearFragment;
-    private GearListFragment gearListFragment;
+    private ListFragment listFragment;
 
     private BleManager bleManager;
     private BleScanner bleScanner;
@@ -80,7 +79,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private static final byte F_MENU_GEAR = 2;
     private static final byte F_MENU_GEAR_SELECTION = 4;
     private static final byte F_MENU_DEBUG = 8;
-
 
 
     private static final byte NO_GEAR_DATA = (byte)255;
@@ -142,7 +140,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         toolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
 
-
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "navigation onClick: show gear list");
+                showListFragment();
+            }
+        });
 
         // progress bar on toolbar, visible while scanning / connecting
         progressBar = (ProgressBar) findViewById(R.id.main_toolbar_progress_bar);
@@ -152,25 +156,25 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         gearMap = new HashMap();
         groupMap = new HashMap();
 
-        // clickable title below toolbar, shows connected device address / dali gear name
-        titleView = (TextView) findViewById(R.id.main_title_view);
-        /*titleView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (activeFragment != null)
-                    closeActiveFragment();
-            }
-        });*/
-        titleView.setText("No devices");
-        titleView.setTextSize(32); // maybe should check screen dimensions before setting text size
+
+        infoTextView = (TextView) findViewById(R.id.main_info_text_view);
+        infoTextView.setText("No devices");
+        infoTextView.setTextSize(32); // maybe should check screen dimensions before setting text size
 
 
         // layout for holding fragments
         fragmentLayout = (FrameLayout) findViewById(R.id.main_fragment_content);
         fragmentLayout.setVisibility(View.VISIBLE);
+        fragmentLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "FRAGMENT LAYOUT CLICKED");
+            }
+        });
 
-        gearListFragment = GearListFragment.newInstance();
-        gearListFragment.setListener(this);
+        listFragment = ListFragment.newInstance();
+        listFragment.setListener(this);
+        showListFragment();
 
         // bleManager provides bluetooth methods
         bleManager = new BleManager(this, this);
@@ -217,11 +221,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 addCheckedItemsToGroup((byte)255);
                 return true;
             case R.id.action_remove_from_group:
-                if (gearListFragment == null) {
+                if (listFragment == null) {
                     Log.d(TAG, "options item action: remove from group: gearListFragment==null");
                     return true;
                 }
-                byte groupId = gearListFragment.getExpandedGroupId();
+                byte groupId = listFragment.getExpandedGroupId();
                 if (groupId == NO_GEAR_DATA)
                     Log.d(TAG, "options item action: remove from group: cannot remove from base group");
                 else removeCheckedItemsFromGroup(groupId);
@@ -230,6 +234,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 skipConnect = true;
                 stopScan();
                 onConnected();
+                return true;
+            // gear fragment actions
+            case R.id.action_rename_gear:
+                Log.d(TAG, "menu action: rename gear");
+                gearFragment.renameGear();
+                return true;
+            case R.id.action_show_gear_info:
+                Log.d(TAG, "menu action: show gear info/control");
+                gearFragment.toggleView();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -243,9 +257,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
 
         overflowMenu.setGroupVisible(R.id.menu_group_main, (flags & F_MENU_MAIN) != 0);
-        overflowMenu.setGroupVisible(R.id.menu_group_gear, (flags & F_MENU_GEAR) != 0);
+        overflowMenu.setGroupVisible(R.id.menu_group_gear_fragment, (flags & F_MENU_GEAR) != 0);
         overflowMenu.setGroupVisible(R.id.menu_group_grouping, (flags & F_MENU_GEAR_SELECTION) != 0);
         overflowMenu.setGroupVisible(R.id.menu_group_debug, (flags & F_MENU_DEBUG) != 0);
+    }
+
+    private void showBackNavigation(boolean show) {
+        getSupportActionBar().setDisplayHomeAsUpEnabled(show);
+        getSupportActionBar().setDisplayShowHomeEnabled(show);
     }
 
     // request location permissions if needed
@@ -288,6 +307,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 }
                 return;
             }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bleScanner != null && foundDevices.size() == 0) {
+            Log.d(TAG, "onResume(): starting scan");
+            startScan();
         }
     }
 
@@ -335,12 +363,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             Log.d(TAG, "unable to show gear fragment: id " + (int)gearId + " not found");
             return;
         }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                titleView.setText(gear.getName()); // set title
-            }
-        });
 
         gearFragment = GearFragment.newInstance(gear, this);
 
@@ -348,18 +370,39 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 .replace(R.id.main_fragment_content, gearFragment)
                 .commit(); // sets gear fragment on fragment container
 
+        showBackNavigation(true);
+        setVisibleMenuGroups(F_MENU_GEAR);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                toolbar.setTitle(gear.getName());
+            }
+        });
+
         activeFragment = gearFragment;
     }
 
-    private void showGearListFragment() {
-        if (gearListFragment == null) {
-            gearListFragment = GearListFragment.newInstance();
-            gearListFragment.setListener(this);
+    private void showListFragment() {
+        if (listFragment == null) {
+            listFragment = ListFragment.newInstance();
+            listFragment.setListener(this);
         }
         getFragmentManager().beginTransaction()
-                .replace(R.id.main_fragment_content, gearListFragment)
+                .replace(R.id.main_fragment_content, listFragment)
                 .commit(); // sets gear list fragment on fragment container
-        activeFragment = gearListFragment;
+
+        showBackNavigation(false);
+        setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                //toolbar.setTitle("Devices");
+                toolbar.setTitle("Lights");
+            }
+        });
+
+        activeFragment = listFragment;
     }
 
     // callback to handle gear fragment ui actions
@@ -382,22 +425,20 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             case GearFragment.ACTION_STEP: // not implemented
                 // step
                 break;
-            case GearFragment.ACTION_CLOSE: // close the fragment (show list fragment)
-                //showListFragment();
-                showGearListFragment();
+            case GearFragment.ACTION_CLOSE: // close the fragment (show gear list fragment)
+                showListFragment();
                 break;
             case GearFragment.ACTION_RENAME: // rename gear
                 final String newName = gearFragment.getNewName(); // get new name from fragment
                 if (isGroup) groupMap.get(gearId).setName(newName);
                 else gearMap.get(gearId).setName(newName);
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        //listFragment.renameItem(gearId, newName);
-                        titleView.setText(newName); // update title
+                        toolbar.setTitle(newName);
                     }
                 });
+
                 break;
             default:
                 Log.d(TAG, "Invalid GearFragment action");
@@ -405,22 +446,34 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     @Override
-    public void onGearListFragmentAction(int which, GearListItem item) {
-        DaliGear gear = item == null ? null : item.getGear();
+    public void onListFragmentAction(int which, ProtoListItem item) {
+        DaliGear gear = null;
+        BluetoothDevice device = null;
+
+        if (item != null) {
+            if (item.getType() == ProtoListItem.TYPE_DEVICE)
+                device = item.getDevice();
+            else gear = item.getGear();
+        }
         switch (which) {
-            case GearListFragment.ITEM_ACTION_OPEN:
+            case ListFragment.ITEM_ACTION_OPEN:
                 showGearFragment(gear.getId(), gear.isGroup());
                 break;
-            case GearListFragment.ACTION_GROUP_SELECTED:
+            case ListFragment.ITEM_ACTION_CONNECT:
+                stopScan();
+                if (device != null)
+                    connect(device);
+                break;
+            case ListFragment.ACTION_GROUP_SELECTED:
                 addCheckedItemsToGroup(gear.getId());
                 break;
-            case GearListFragment.ACTION_EXPANDED_GROUP_SELECTED:
+            case ListFragment.ACTION_EXPANDED_GROUP_SELECTED:
                 removeCheckedItemsFromGroup(gear.getId());
                 break;
-            case GearListFragment.ACTION_SELECTION_START:
+            case ListFragment.ACTION_SELECTION_START:
                 setVisibleMenuGroups(F_MENU_GEAR_SELECTION);
                 break;
-            case GearListFragment.ACTION_SELECTION_END:
+            case ListFragment.ACTION_SELECTION_END:
                 setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
                 break;
             default:
@@ -457,8 +510,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
         group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
         ArrayList<DaliGear> gears = group.getGroup();
+        DaliGear gear;
+        int relativePower;
         for (int i = 0; i < gears.size(); i++) {
-            setGearPower(gears.get(i).getId(), powerLevel);
+            gear = gears.get(i);
+            relativePower = gear.getDataByteInt(DaliGear.DATA_POWER_MIN) + (int)(group.getPowerRatio() *
+                    (gear.getDataByteInt(DaliGear.DATA_POWER_MAX) - gear.getDataByteInt(DaliGear.DATA_POWER_MIN)));
+            setGearPower(gears.get(i).getId(), relativePower);
         }
 
     }
@@ -527,7 +585,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             group.setId(groupId);
         }
 
-        for (GearListItem item : gearListFragment.getSelectedItems()) {
+        for (ProtoListItem item : listFragment.getSelectedItems()) {
             //DaliGear gear = gearMap.get(item.getGear().getId());
             DaliGear gear = item.getGear();
             if (gear != null) {
@@ -547,12 +605,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (newGroup) {
             Log.d(TAG, "adding new group with id=" + groupId);
             groupMap.put(groupId, group);
-            gearListFragment.addItem(group);
+            listFragment.addItem(group);
         }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                gearListFragment.clearSelection();
+                listFragment.clearSelection();
             }
         });
 
@@ -566,7 +624,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
 
-        for (GearListItem item : gearListFragment.getSelectedItems()) {
+        for (ProtoListItem item : listFragment.getSelectedItems()) {
             DaliGear gear = item.getGear();
             if (gear == null) continue;
             if (group.removeGroupMember(gear)) {
@@ -585,9 +643,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (groupEmpty) gearListFragment.removeExpandedGroup();
-                gearListFragment.removeSelectedItems();
-                gearListFragment.clearSelection();
+                if (groupEmpty) listFragment.removeExpandedGroup();
+                listFragment.removeSelectedItems();
+                listFragment.clearSelection();
             }
         });
     }
@@ -680,16 +738,31 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         foundDevices.add(device);
 
+        final BluetoothDevice fDevice = device;
 
-        final BluetoothDevice d = device;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                titleView.setText(foundDevices.size() + " devices found");
+                if (foundDevices.size() == 1) listFragment.clear();
+                listFragment.addItem(fDevice);
+                listFragment.update();
+                infoTextView.setText(foundDevices.size() + " devices found");
             }
         });
 
-        // TODO: show list of found devices
+        if (device.getName() == null) return;
+
+        if (device.getName().equalsIgnoreCase("blec")) {
+            stopScan();
+            Log.d(TAG, "FOUND BLEC!");
+            deviceAddress = device.getAddress();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    infoTextView.setText("Connect to BLEC");
+                }
+            });
+        }
     }
 
     @Override
@@ -731,24 +804,29 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         g.setId(NO_GEAR_DATA);
         groupMap.put(NO_GEAR_DATA, g);
 
-        showGearListFragment();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                gearListFragment.addItem(g);
+                listFragment.clear();
+                listFragment.addItem(g);
+                listFragment.update();
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
-                titleView.setText("Connected");
+                infoTextView.setVisibility(View.GONE);
             }
         });
+        showListFragment();
 
+        // DEBUG
         if (skipConnect) {
-            // add some dummy gears; remove sometime
+            // add some dummy gears
             for (int i = 0; i < 5; i++) {
-                byte[] bytes = {(byte) i, 0, 0, 0};
-                updateGear(bytes);
-                gearMap.get((byte)i).setDataByte(DaliGear.DATA_COLOR_COOLEST, (byte)67);
-                gearMap.get((byte)i).setDataByte(DaliGear.DATA_COLOR_WARMEST, (byte)27);
+                byte[] bytes = {(byte)i, 0, (byte)254, 1, 64, 27};
+                setGearConstants(bytes);
+            }
+            for (int i = 5; i < 10; i++) {
+                byte[] bytes = {(byte)i, 0, (byte)100, 0, 0, 0};
+                setGearConstants(bytes);
             }
         }
     }
@@ -761,7 +839,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             public void run() {
                 progressBar.setVisibility(View.GONE);
                 toolbar.setTitle(R.string.app_name);
-                titleView.setText("Disconnected");
+                infoTextView.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -844,12 +922,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (!bleScanner.isReady())
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
         foundDevices.clear();
-
+        showListFragment();
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                titleView.setText("No devices");
+                //showListFragment();
+                listFragment.clear();
+                listFragment.update();
+                infoTextView.setText("No devices");
+                infoTextView.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
                 toolbar.setTitle("Scanning...");
             }

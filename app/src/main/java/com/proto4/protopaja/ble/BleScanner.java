@@ -45,6 +45,10 @@ public class BleScanner {
         handler = new Handler();
     }
 
+    public ArrayList<BluetoothDevice> getFoundDevices() {
+        return foundDevices;
+    }
+
     public void setSettings(ScanSettings settings){
         scanSettings = settings;
     }
@@ -125,6 +129,25 @@ public class BleScanner {
                         + dataString + ")");
             }
 
+            /*
+            // filter ...
+            byte ab0, ab1;
+            boolean f = false;
+            int bc = 5;
+            for (int i = 0; i < data.length - 2; i++) {
+                if (data[i] == (byte)0x19) {
+                    ab0 = data[i+1];
+                    ab1 = data[i+2];
+                    int s = ((int) ab0 << 16) + (int) ab1;
+                    Log.d(TAG, "APPEARANCE: " + s);
+                    if (ab0 == 0xd4 && ab1 == 0x31) {
+                        f = true;
+                        break;
+                    }
+                }
+            }
+            if (!f) return;
+            */
             BluetoothDevice device = result.getDevice();
             if (foundDevices.contains(device))
                 return;

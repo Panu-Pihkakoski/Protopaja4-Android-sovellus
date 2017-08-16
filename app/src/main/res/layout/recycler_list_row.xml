@@ -8,13 +8,15 @@
         android:layout_height="wrap_content"
         android:background="#808080"
         android:padding="5dp"
+        android:elevation="4dp"
         android:id="@+id/relativeLayout">
 
         <RelativeLayout
             android:id="@+id/list_row_boundaries"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#101010">
+            android:background="#101010"
+            android:elevation="4dp">
 
             <TextView
                 android:id="@+id/list_row_title"
@@ -22,6 +24,7 @@
                 android:textColor="@color/list_item_title_text"
                 android:textSize="32sp"
                 android:textStyle="bold"
+                android:elevation="4dp"
                 android:layout_alignParentTop="true"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
@@ -35,7 +38,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:layout_margin="8dp" />
+                android:layout_margin="8dp"
+                android:elevation="4dp" />
 
             <ImageView
                 android:id="@+id/list_item_brightness_icon"
@@ -47,19 +51,8 @@
                 android:layout_marginLeft="8dp"
                 android:layout_marginRight="8dp"
                 android:layout_alignBottom="@+id/list_row_title"
-                android:layout_alignParentEnd="true" />
-
-            <!--
-            <ImageView
-                android:id="@+id/list_item_temp_icon"
-                android:contentDescription="@string/temp_icon_desc"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/temp_icon"
-                android:layout_alignTop="@+id/list_item_brightness_icon"
-                android:layout_toStartOf="@+id/list_item_brightness_icon" />
-            -->
-
+                android:layout_alignParentEnd="true"
+                android:elevation="4dp" />
 
         </RelativeLayout>
 

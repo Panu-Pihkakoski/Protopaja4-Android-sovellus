@@ -2,6 +2,7 @@ package com.proto4.protopaja.ui;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.proto4.protopaja.DaliController;
 import com.proto4.protopaja.DaliGear;
 import com.proto4.protopaja.R;
 
@@ -21,15 +23,15 @@ import java.util.ArrayList;
  */
 
 
-public class GearListFragment extends Fragment {
+public class ListFragment extends Fragment {
 
-    private static final String TAG = GearListFragment.class.getSimpleName();
+    private static final String TAG = ListFragment.class.getSimpleName();
 
-    private ArrayList<GearListItem> listItems;
-    private ArrayList<GearListItem> selectedItems;
+    private ArrayList<ProtoListItem> listItems;
+    private ArrayList<ProtoListItem> selectedItems;
     private RecyclerView recyclerView;
 
-    private GearListItem expandedGroup;
+    private ProtoListItem expandedGroup;
 
     private boolean isSelecting;
 
@@ -37,6 +39,7 @@ public class GearListFragment extends Fragment {
 
 
     public static final int ITEM_ACTION_OPEN = 1;
+    public static final int ITEM_ACTION_CONNECT = 2;
 
     public static final int ACTION_GROUP_SELECTED = 5;
     public static final int ACTION_EXPANDED_GROUP_SELECTED = 6;
@@ -44,12 +47,12 @@ public class GearListFragment extends Fragment {
     public static final int ACTION_SELECTION_END = 8;
 
 
-    public GearListFragment() {
+    public ListFragment() {
 
     }
 
-    public static GearListFragment newInstance() {
-        GearListFragment fragment = new GearListFragment();
+    public static ListFragment newInstance() {
+        ListFragment fragment = new ListFragment();
         fragment.listItems = new ArrayList<>();
         fragment.selectedItems = new ArrayList<>();
         fragment.isSelecting = false;
@@ -57,23 +60,29 @@ public class GearListFragment extends Fragment {
     }
 
     public void addItem(DaliGear gear) {
-        listItems.add(new GearListItem(gear));
+        Log.d(TAG, "adding gear to list");
+        listItems.add(new ProtoListItem(gear));
+    }
+
+    public void addItem(BluetoothDevice device) {
+        Log.d(TAG, "adding device to list");
+        listItems.add(new ProtoListItem(device));
     }
 
     public void clear() {
         listItems.clear();
         selectedItems.clear();
-        recyclerView.getAdapter().notifyDataSetChanged();
+        //recyclerView.getAdapter().notifyDataSetChanged();
     }
 
     public void clearSelection() {
         Log.d(TAG, "clearSelection()");
         if (listener != null) {
-            listener.onGearListFragmentAction(ACTION_SELECTION_END, null);
+            listener.onListFragmentAction(ACTION_SELECTION_END, null);
         }
         isSelecting = false;
         selectedItems.clear();
-        GearListItem item;
+        ProtoListItem item;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
             item.setCheckBoxVisible(false);
@@ -82,7 +91,7 @@ public class GearListFragment extends Fragment {
         }
     }
 
-    public ArrayList<GearListItem> getSelectedItems() {
+    public ArrayList<ProtoListItem> getSelectedItems() {
         Log.d(TAG, "getSelectedItems() returning " + selectedItems.size() + " items");
         return selectedItems;
     }
@@ -95,12 +104,12 @@ public class GearListFragment extends Fragment {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    public void expandGroup(GearListItem group) {
+    public void expandGroup(ProtoListItem group) {
         Log.d(TAG, "expandGroup()");
-        ArrayList<GearListItem> toRemove = new ArrayList<>();
+        ArrayList<ProtoListItem> toRemove = new ArrayList<>();
         int groupPosition = -1;
         for (int i = 0; i < listItems.size(); i++) {
-            GearListItem item = listItems.get(i);
+            ProtoListItem item = listItems.get(i);
             if (!item.isGroup())
                 toRemove.add(item);
             else if (item == group)
@@ -114,7 +123,7 @@ public class GearListFragment extends Fragment {
             ArrayList<DaliGear> gears = group.getGear().getGroup();
             for (int i = 0; i < gears.size(); i++) {
                 DaliGear g = gears.get(i);
-                listItems.add(++groupPosition, new GearListItem(g));
+                listItems.add(++groupPosition, new ProtoListItem(g));
                 Log.d(TAG, "added list item on expand");
             }
             expandedGroup = group;
@@ -132,8 +141,8 @@ public class GearListFragment extends Fragment {
     private void startSelection(int position) {
         Log.d(TAG, "startSelection(position=" + position + ")");
         if (listener != null)
-            listener.onGearListFragmentAction(ACTION_SELECTION_START, null);
-        GearListItem item;
+            listener.onListFragmentAction(ACTION_SELECTION_START, null);
+        ProtoListItem item;
         isSelecting = true;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
@@ -149,7 +158,7 @@ public class GearListFragment extends Fragment {
 
     private void select(int position) {
         Log.d(TAG, "select(" + position + ")");
-        GearListItem item = listItems.get(position);
+        ProtoListItem item = listItems.get(position);
         item.setChecked(!item.isChecked());   // toggle select
         recyclerView.getAdapter().notifyItemChanged(position);
         if (item.isChecked())
@@ -161,7 +170,7 @@ public class GearListFragment extends Fragment {
 
         // DEBUG
         String si = "";
-        for (GearListItem i : selectedItems) {
+        for (ProtoListItem i : selectedItems) {
             si += i.getGear().getName() + "\n";
         }
         Log.d(TAG, "selectedItems (" + selectedItems.size() + "):\n" + si);
@@ -212,7 +221,7 @@ public class GearListFragment extends Fragment {
             Log.d(TAG, "listItems was null");
             listItems = new ArrayList<>();
         }
-        recyclerView.setAdapter(new GearListAdapter(activity, listItems));
+        recyclerView.setAdapter(new ProtoListAdapter(activity, listItems));
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
 
         // set on item click listener for recycler list items
@@ -224,11 +233,19 @@ public class GearListFragment extends Fragment {
                     Log.w(TAG, "list index out of bounds (" + position + ")");
                     return;
                 }
-                final GearListItem item = listItems.get(position);
+                final ProtoListItem item = listItems.get(position);
+
+                if (item.getType() == ProtoListItem.TYPE_DEVICE) {
+                    Log.d(TAG, "clicked on bt device");
+                    if (listener != null)
+                        listener.onListFragmentAction(ITEM_ACTION_CONNECT, item);
+                    return;
+                }
+
                 if (isSelecting) {
                     if (item.isGroup()) {
                         if (listener != null)
-                            listener.onGearListFragmentAction((item == expandedGroup) ?
+                            listener.onListFragmentAction((item == expandedGroup) ?
                                     ACTION_EXPANDED_GROUP_SELECTED : ACTION_GROUP_SELECTED, item);
                     } else {
                         select(position);
@@ -236,7 +253,7 @@ public class GearListFragment extends Fragment {
                     return;
                 }
                 if (listener != null)
-                    listener.onGearListFragmentAction(ITEM_ACTION_OPEN, item);
+                    listener.onListFragmentAction(ITEM_ACTION_OPEN, item);
 
             }
         });
@@ -246,8 +263,8 @@ public class GearListFragment extends Fragment {
             public boolean onItemLongClicked(final RecyclerView recyclerView, int position, View v) {
                 Log.d(TAG, "on list item long clicked");
 
-                final GearListItem item = listItems.get(position);
-                if (isSelecting) // doesn't react to long click
+                final ProtoListItem item = listItems.get(position);
+                if (isSelecting || item.getType() == ProtoListItem.TYPE_DEVICE) // doesn't react to long click
                     return false;
                 if (item.isGroup()) {
                     Log.d(TAG, "long clicked group");
@@ -262,6 +279,6 @@ public class GearListFragment extends Fragment {
     }
 
     public interface Listener {
-        void onGearListFragmentAction(int which, GearListItem item);
+        void onListFragmentAction(int which, ProtoListItem item);
     }
 }
