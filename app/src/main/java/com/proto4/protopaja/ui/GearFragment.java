@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -33,6 +34,7 @@ public class GearFragment extends Fragment {
     private String infoText, newName;
     private boolean showInfo;
 
+    private ImageButton powerButton, infoButton;
     private RoundSlider powerSlider, colorTempSlider;
 
     private GearFragmentListener listener;
@@ -117,8 +119,26 @@ public class GearFragment extends Fragment {
         if (gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) == 0)
             colorTempSlider.setVisibility(View.GONE);
 
+        powerButton = activity.findViewById(R.id.gear_power_button);
+        powerButton.setColorFilter(gear.getPowerInt() > 0 ? 0 : 0x80000000);
+        powerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onPowerSwitched();
+            }
+        });
+
+        infoButton = activity.findViewById(R.id.gear_info_button);
+        infoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggleView();
+            }
+        });
+
         infoView = activity.findViewById(R.id.gear_info_view);
         infoViewText = activity.findViewById(R.id.gear_info_view_text);
+        infoViewText.setTextSize(20);
         if (infoText != null)
             infoViewText.setText(infoText);
 
@@ -126,9 +146,24 @@ public class GearFragment extends Fragment {
         toggleView();
     }
 
+    public void onPowerSwitched() {
+        if (powerLevel > 0) {
+            powerSlider.setValue(0);
+            powerSlider.update();
+            onPowerSet(0);
+        } else {
+            powerSlider.setValue(lastPowerLevel > 0 ? lastPowerLevel: maxPower);
+            powerSlider.update();
+            onPowerSet(lastPowerLevel > 0 ? lastPowerLevel: maxPower);
+        }
+        if (showInfo) infoViewText.setText(gear.getInfoString());
+    }
+
     public void onPowerSet(int power) {
         Log.d(TAG, "power set: " + power);
+        lastPowerLevel = powerLevel;
         powerLevel = power;
+        powerButton.setColorFilter(powerLevel > 0 ? 0 : 0x80000000);
         if (listener != null)
             listener.onGearFragmentAction(ACTION_POWER, powerLevel, gear.getId(), gear.isGroup());
     }
@@ -141,19 +176,21 @@ public class GearFragment extends Fragment {
 
     public void setGear(DaliGear _gear) {
         gear = _gear;
+        minPower = gear.getMinPowerInt();
+        maxPower = gear.getMaxPowerInt();
         powerLevel = gear.getPowerInt();
         powerSlider.setValue(powerLevel);
+        powerButton.setColorFilter(powerLevel > 0 ? 0 : 0x80000000);
         colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
         colorTempSlider.setVisibility(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) > 0 ? View.VISIBLE : View.GONE);
         infoText = gear.getInfoString();
     }
 
     public void toggleView() {
-        if (infoText != null)
-            infoViewText.setText(infoText);
+        infoText = gear.getInfoString();
         showInfo = !showInfo;
         if (showInfo)
-            infoViewText.setText(gear.getInfoString());
+            infoViewText.setText(infoText);
         infoView.setVisibility(showInfo ? View.VISIBLE : View.GONE);
         controlView.setVisibility(showInfo ? View.GONE : View.VISIBLE);
     }

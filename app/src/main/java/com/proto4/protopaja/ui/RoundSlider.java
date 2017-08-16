@@ -121,6 +121,10 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
         backgroundColor = color;
     }
 
+    public void update() {
+        renderContents();
+    }
+
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.d(TAG, "surfaceChanged");

@@ -388,6 +388,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                infoTextView.setVisibility(View.GONE);
                 toolbar.setTitle(gear.getName());
             }
         });

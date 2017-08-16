@@ -3,6 +3,7 @@ package com.proto4.protopaja;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * Created by user on 4.07.17.
@@ -233,14 +234,24 @@ public class DaliGear {
         Log.d(TAG, "getInfoString()");
         byte status = data[DATA_STATUS];
         String info = "";
-        info += "Power level = " + getPowerInt() + "\n";
-        info += "Power min = " + getDataByteInt(DATA_POWER_MIN) + "\n";
-        info += "Power max = " + getDataByteInt(DATA_POWER_MAX) + "\n";
-        info += "Color temperature = " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
-        info += "Color coolest = " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
-        info += "Color warmest = " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
-        info += "Temp0 = " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100) + "\n";
-        info += "Temp1 = " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100) + "\n";
+        //info += "Power level =         " + getPowerInt() + "\n";
+        info += String.format(Locale.getDefault(), "Power level = %14d\n", getPowerInt());
+        //info += "Power min =           " + getDataByteInt(DATA_POWER_MIN) + "\n";
+        info += String.format(Locale.getDefault(), "Power min = %16d\n", getDataByteInt(DATA_POWER_MIN));
+        //info += "Power max =           " + getDataByteInt(DATA_POWER_MAX) + "\n";
+        info += String.format(Locale.getDefault(), "Power max = %16d\n", getDataByteInt(DATA_POWER_MAX));
+        //info += "Color temperature =   " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
+        info += String.format(Locale.getDefault(), "Color temp = %14dK\n", getDataByteInt(DATA_COLOR_TEMP));
+        //info += "Color coolest =       " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
+        info += String.format(Locale.getDefault(), "Color coolest = %11dK\n", getDataByteInt(DATA_COLOR_COOLEST)*100);
+        //info += "Color warmest =       " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
+        info += String.format(Locale.getDefault(), "Color warmest = %11dK\n", getDataByteInt(DATA_COLOR_WARMEST)*100);
+        //info += "Temp0 =               " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100) + "\n";
+        info += String.format(Locale.getDefault(), "Temp0 = %18.2f°C\n",
+                getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100);
+        //info += "Temp1 =               " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100) + "\n";
+        info += String.format(Locale.getDefault(), "Temp1 = %18.2f°C\n",
+                getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100);
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";
