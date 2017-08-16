@@ -30,9 +30,9 @@ public class DaliGear {
     public static final int DATA_COLOR_COOLEST = 7;
     public static final int DATA_COLOR_WARMEST = 8;
     public static final int DATA_TEMP_0 = 9;
-    public static final int DATA_TEMP_0d = 10;
+    public static final int DATA_TEMP_0F = 10;
     public static final int DATA_TEMP_1 = 11;
-    public static final int DATA_TEMP_1d = 12;
+    public static final int DATA_TEMP_1F = 12;
 
 
     public static final int STATUS_BALLAST_FAILURE = 1;
@@ -113,6 +113,14 @@ public class DaliGear {
         return (data[DATA_POWER_MAX] < 0) ? 256+data[DATA_POWER_MAX] : data[DATA_POWER_MAX];
     }
 
+    public float getTemp0Float() {
+        return getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100;
+    }
+
+    public float getTemp1Float() {
+        return getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100;
+    }
+
     public String getName(){
         return name;
     }
@@ -185,9 +193,9 @@ public class DaliGear {
         data[DATA_POWER] = bytes[1];
         data[DATA_COLOR_TEMP] = bytes[2];
         data[DATA_TEMP_0] = bytes[3];
-        data[DATA_TEMP_0d] = bytes[4];
+        data[DATA_TEMP_0F] = bytes[4];
         data[DATA_TEMP_1] = bytes[5];
-        data[DATA_TEMP_1d] = bytes[6];
+        data[DATA_TEMP_1F] = bytes[6];
     }
 
     public boolean isGroup(){
@@ -231,8 +239,8 @@ public class DaliGear {
         info += "Color temperature = " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
         info += "Color coolest = " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
         info += "Color warmest = " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
-        info += "Temp0 = " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0d)/100) + "\n";
-        info += "Temp1 = " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1d)/100) + "\n";
+        info += "Temp0 = " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100) + "\n";
+        info += "Temp1 = " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100) + "\n";
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";

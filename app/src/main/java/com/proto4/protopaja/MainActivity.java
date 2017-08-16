@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private static final byte F_MENU_DEBUG = 8;
 
 
+    private static final byte GROUP_ALL = (byte)255;
     private static final byte NO_GEAR_DATA = (byte)255;
 
     private static final byte DALI_COMMAND_OFF = 0;
@@ -144,7 +145,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             @Override
             public void onClick(View view) {
                 Log.d(TAG, "navigation onClick: show gear list");
-                showListFragment();
+                showGears();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        listFragment.update();
+                    }
+                });
             }
         });
 
@@ -213,6 +220,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         switch (item.getItemId()) {
             case R.id.action_scan:
                 startScan();
+                return true;
+            case R.id.action_show_found_devices:
+                showFoundDevices();
+                return true;
+            case R.id.action_show_gear_list:
+                showGears();
                 return true;
             case R.id.action_query:
                 sendStatusQuery((byte)0);
@@ -397,13 +410,80 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                //toolbar.setTitle("Devices");
-                toolbar.setTitle("Lights");
+                //toolbar.setTitle("Lights");
             }
         });
 
         activeFragment = listFragment;
     }
+
+
+    private void showFoundDevices() {
+        if (activeFragment != listFragment) showListFragment();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                listFragment.clear();
+                for (int i = 0; i < foundDevices.size(); i++) {
+                    listFragment.addItem(foundDevices.get(i));
+                }
+                if (foundDevices.size() > 0) {
+                    toolbar.setTitle(R.string.app_name);
+                    listFragment.update();
+                    infoTextView.setVisibility(View.GONE);
+                } else {
+                    infoTextView.setText(R.string.no_devices);
+                    infoTextView.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+    }
+
+    private void showGears() {
+        if (activeFragment != listFragment) showListFragment();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                listFragment.clear();
+                for (Byte key : groupMap.keySet()) {
+                    listFragment.addItem(groupMap.get(key));
+                }
+                if (groupMap.size() > 0) {
+                    toolbar.setTitle(R.string.gear_list_title);
+                    listFragment.update();
+
+                    showRoomTemperature();
+                    //infoTextView.setVisibility(View.GONE);
+
+                } else {
+                    infoTextView.setText(R.string.no_gears);
+                    infoTextView.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+    }
+
+    private void showRoomTemperature() {
+        if (groupMap.size() == 0) return;
+        DaliGear group = groupMap.get(GROUP_ALL);
+        if (group == null) return;
+
+        ArrayList<DaliGear> allGears = group.getGroup();
+        if (allGears == null) return;
+        float tempSum = 0;
+        for (int i = 0; i < allGears.size(); i++) {
+            tempSum += allGears.get(i).getTemp1Float();
+        }
+        final float roomTemp = tempSum/allGears.size();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                infoTextView.setText("Room temperature: " + roomTemp + "°C");
+                infoTextView.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
 
     // callback to handle gear fragment ui actions
     @Override
@@ -426,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 // step
                 break;
             case GearFragment.ACTION_CLOSE: // close the fragment (show gear list fragment)
-                showListFragment();
+                showGears();
                 break;
             case GearFragment.ACTION_RENAME: // rename gear
                 final String newName = gearFragment.getNewName(); // get new name from fragment
@@ -710,6 +790,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         });
 
+        showRoomTemperature(); // update shown room temperature
+
         return 0;
     }
 
@@ -815,16 +897,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 infoTextView.setVisibility(View.GONE);
             }
         });
-        showListFragment();
+        showGears();
 
         // DEBUG
         if (skipConnect) {
             // add some dummy gears
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 4; i++) {
                 byte[] bytes = {(byte)i, 0, (byte)254, 1, 64, 27};
                 setGearConstants(bytes);
             }
-            for (int i = 5; i < 10; i++) {
+            for (int i = 4; i < 8; i++) {
                 byte[] bytes = {(byte)i, 0, (byte)100, 0, 0, 0};
                 setGearConstants(bytes);
             }
@@ -922,7 +1004,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (!bleScanner.isReady())
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
         foundDevices.clear();
-        showListFragment();
+        showFoundDevices();
 
         runOnUiThread(new Runnable() {
             @Override

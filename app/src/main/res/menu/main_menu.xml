@@ -6,7 +6,13 @@
     <group android:id="@+id/menu_group_main">
         <item android:id="@+id/action_scan"
             android:title="@string/action_scan"
-            app:showAsAction="never"/>
+            app:showAsAction="never" />
+        <item android:id="@+id/action_show_found_devices"
+            android:title="Found Devices"
+            app:showAsAction="never" />
+        <item android:id="@+id/action_show_gear_list"
+            android:title="@string/gear_list_title"
+            app:showAsAction="never" />
     </group>
 
     <group android:id="@+id/menu_group_grouping">

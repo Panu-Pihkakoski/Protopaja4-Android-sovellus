@@ -10,7 +10,10 @@
     <string name="action_navi_control">Control</string>
     <string name="action_navi_data">Data</string>
 
-    <string name="no_devices">No Devices</string>
+    <string name="gear_list_title">Lights</string>
+
+    <string name="no_devices">No devices</string>
+    <string name="no_gears">No lights</string>
 
     <string name="brightness_icon_desc">Brightness</string>
     <string name="temp_icon_desc">Temperature</string>
