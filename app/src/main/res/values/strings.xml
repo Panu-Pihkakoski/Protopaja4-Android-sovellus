@@ -18,4 +18,16 @@
     <string name="brightness_icon_desc">Brightness</string>
     <string name="temp_icon_desc">Temperature</string>
 
+    <string name="help">App starts scanning devices automatically.\n
+                        Devices will be listed as they are discovered.\n
+                        Choose a device to connect to.\n
+                        App will start receiving lamp data.\n\n
+                        To open the lamp control panel, click on a lamp (green) or a group (red).\n
+                        To view lamp data, press the info button on top right corner of the panel.\n\n
+                        To expand/collapse a group, press and hold on a group.\n
+                        To start selecting lamps, press and hold on a lamp.\n
+                        Click on \"Create new group\" to create new group from selected lamps.\n
+                        Click on \"Remove\" to remove selected lamps from group.\n
+                        Note: Lamps from group \"All\" cannot be removed.</string>
+
 </resources>

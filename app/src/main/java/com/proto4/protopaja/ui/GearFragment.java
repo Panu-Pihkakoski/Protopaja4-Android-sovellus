@@ -28,6 +28,12 @@ public class GearFragment extends Fragment {
 
     private static final String TAG = GearFragment.class.getSimpleName();
 
+    private static final int DEFAULT_POWER_MIN = 0;
+    private static final int DEFAULT_POWER_MAX = 100;
+    private static final int DEFAULT_COLOR_WARMEST = 0;
+    private static final int DEFAULT_COLOR_COOLEST = 0;
+
+
     private RelativeLayout controlView;
     private RelativeLayout infoView;
     private TextView infoViewText;
@@ -37,11 +43,18 @@ public class GearFragment extends Fragment {
     private ImageButton powerButton, infoButton;
     private RoundSlider powerSlider, colorTempSlider;
 
-    private GearFragmentListener listener;
+    private Listener listener;
 
-    private DaliGear gear;
+    private int itemId;
+    private boolean itemIsGroup;
 
-    private int powerLevel, lastPowerLevel, minPower, maxPower;
+
+    private int minPower = DEFAULT_POWER_MIN, maxPower = DEFAULT_POWER_MAX;
+    private int powerLevel = minPower, lastPowerLevel = minPower;
+    private int colorWarmest = DEFAULT_COLOR_WARMEST, colorCoolest = DEFAULT_COLOR_COOLEST;
+    private int colorTemp = colorWarmest;
+
+
 
     public static final int ACTION_POWER = 0;
     public static final int ACTION_STEP = 2;
@@ -54,7 +67,18 @@ public class GearFragment extends Fragment {
         // Required empty public constructor
     }
 
+    public static GearFragment newInstance(Listener listener) {
+        GearFragment fragment = new GearFragment();
+        fragment.itemId = 255;
+        fragment.itemIsGroup = false;
+        fragment.minPower = fragment.maxPower = fragment.lastPowerLevel = 0;
+        fragment.infoText = "No info available";
+        fragment.newName = "?";
+        fragment.listener = listener;
+        return fragment;
+    }
 
+    /*
     public static GearFragment newInstance(DaliGear gear) {
         return newInstance(gear, null);
     }
@@ -66,10 +90,11 @@ public class GearFragment extends Fragment {
         fragment.lastPowerLevel = fragment.powerLevel = gear.getPowerInt();
         fragment.minPower = gear.getMinPowerInt();
         fragment.maxPower = gear.getMaxPowerInt();
-        fragment.infoText = gear.getInfoString();
+        fragment.infoText = gear.getInfoString(gear);
         fragment.newName = gear.getName();
         return fragment;
     }
+    */
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -96,12 +121,13 @@ public class GearFragment extends Fragment {
                 onPowerSet(value);
             }
         });
-        powerSlider.setMinValue(gear.getMinPowerInt());
-        powerSlider.setMaxValue(gear.getMaxPowerInt());
-        powerSlider.setValue(gear.getPowerInt());
+        powerSlider.setMinValue(minPower);
+        powerSlider.setMaxValue(maxPower);
+        powerSlider.setValue(powerLevel);
         powerSlider.setShowPercentage(true);
         powerSlider.setSliderBackground(activity.getResources().getColor(R.color.main_bg, null));
 
+        powerSlider.setVisibility(maxPower > minPower ? View.VISIBLE : View.GONE);
 
         colorTempSlider = activity.findViewById(R.id.color_temp_slider);
         colorTempSlider.setListener(new RoundSlider.Listener() {
@@ -110,17 +136,17 @@ public class GearFragment extends Fragment {
                 onColorTempSet(value);
             }
         });
-        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
-        colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
-        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
+        colorTempSlider.setMinValue(colorWarmest);
+        colorTempSlider.setMaxValue(colorCoolest);
+        colorTempSlider.setValue(colorWarmest);
         colorTempSlider.setShowKelvins(true);
         colorTempSlider.setFlipped(true);
         colorTempSlider.setSliderBackground(activity.getResources().getColor(R.color.main_bg, null));
-        if (gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) == 0)
-            colorTempSlider.setVisibility(View.GONE);
+
+        colorTempSlider.setVisibility(colorCoolest > colorWarmest ? View.VISIBLE : View.GONE);
 
         powerButton = activity.findViewById(R.id.gear_power_button);
-        powerButton.setColorFilter(gear.getPowerInt() > 0 ? 0 : 0x80000000);
+        //powerButton.setColorFilter(gear.getPowerInt() > 0 ? 0 : 0x80000000); // dimColorButton(!(power > 0))
         powerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -129,6 +155,7 @@ public class GearFragment extends Fragment {
         });
 
         infoButton = activity.findViewById(R.id.gear_info_button);
+        //infoButton.setColorFilter(0x40000000);
         infoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -156,41 +183,109 @@ public class GearFragment extends Fragment {
             powerSlider.update();
             onPowerSet(lastPowerLevel > 0 ? lastPowerLevel: maxPower);
         }
-        if (showInfo) infoViewText.setText(gear.getInfoString());
+        if (showInfo) infoViewText.setText(infoText);
     }
 
     public void onPowerSet(int power) {
         Log.d(TAG, "power set: " + power);
         lastPowerLevel = powerLevel;
         powerLevel = power;
-        powerButton.setColorFilter(powerLevel > 0 ? 0 : 0x80000000);
+        dimPowerButton(!(powerLevel > 0));
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_POWER, powerLevel, gear.getId(), gear.isGroup());
+            listener.onGearFragmentAction(ACTION_POWER, powerLevel, itemId, itemIsGroup);
     }
 
     public void onColorTempSet(int colorTemp) {
         Log.d(TAG, "color temp set: " + colorTemp);
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_COLOR_TEMP, colorTemp, gear.getId(), gear.isGroup());
+            listener.onGearFragmentAction(ACTION_COLOR_TEMP, colorTemp, itemId, itemIsGroup);
     }
 
-    public void setGear(DaliGear _gear) {
-        gear = _gear;
+    private void dimPowerButton(boolean dim) {
+        powerButton.setColorFilter(dim ? 0x80000000 : 0);
+    }
+
+    public int getItemId() {
+        return itemId;
+    }
+
+    public boolean isItemGroup() {
+        return itemIsGroup;
+    }
+
+    public void setItemIsGroup(boolean isGroup) {
+        Log.d(TAG, "setItemIsGroup: isGroup=" + (isGroup ? "true" : "false"));
+        this.itemIsGroup = isGroup;
+    }
+
+    public void setItemId(int itemId) {
+        this.itemId = itemId;
+    }
+
+    public void setGearValues(DaliGear gear) {
         minPower = gear.getMinPowerInt();
         maxPower = gear.getMaxPowerInt();
         powerLevel = gear.getPowerInt();
         powerSlider.setValue(powerLevel);
         powerButton.setColorFilter(powerLevel > 0 ? 0 : 0x80000000);
+        colorWarmest = gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST);
+        colorCoolest = gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST);
+        colorTemp = gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP);
+        /*
         colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
-        colorTempSlider.setVisibility(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) > 0 ? View.VISIBLE : View.GONE);
-        infoText = gear.getInfoString();
+        colorTempSlider.setVisibility(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP_CAP) != 0 && gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST)
+                   > gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST) ? View.VISIBLE : View.GONE);
+        */
+        infoText = DaliGear.getInfoString(gear);
+    }
+
+    public void setSliderLimits(int powerMin, int powerMax, int colorTempWarmest, int colorTempCoolest) {
+        Log.d(TAG, "setSliderLimits: powerMin=" + powerMin + ", powerMax=" + powerMax +
+                ", warmest=" + colorTempWarmest + ", coolest=" + colorTempCoolest);
+        minPower = powerMin;
+        maxPower = powerMax;
+        colorWarmest = colorTempWarmest;
+        colorCoolest = colorTempCoolest;
+
+        /*if (powerSlider != null) {
+            if (minPower == maxPower)
+                powerSlider.setVisibility(View.GONE);
+            else {
+                powerSlider.setMinValue(minPower);
+                powerSlider.setMaxValue(maxPower);
+            }
+        }
+        if (colorTempSlider != null) {
+            if (colorTempWarmest == colorTempCoolest) // should also test gear:coĺorTempCap
+                colorTempSlider.setVisibility(View.GONE);
+            else {
+                colorTempSlider.setMinValue(colorTempWarmest);
+                colorTempSlider.setMaxValue(colorTempCoolest);
+            }
+        }*/
+    }
+
+    public void setSliderValues(int powerLevel, int colorTemp) {
+        this.powerLevel = powerLevel;
+        this.colorTemp = colorTemp;
+        /*if (powerSlider != null)
+            powerSlider.setValue(powerLevel);
+        if (colorTempSlider != null)
+            colorTempSlider.setValue(colorTemp);
+        */
+    }
+
+    public void setInfoText(String infoText) {
+        this.infoText = infoText;
+        if (infoViewText != null)
+            infoViewText.setText(infoText);
     }
 
     public void toggleView() {
-        infoText = gear.getInfoString();
         showInfo = !showInfo;
         if (showInfo)
             infoViewText.setText(infoText);
+        infoButton.setColorFilter(showInfo ? 0 : 0x40000000);
         infoView.setVisibility(showInfo ? View.VISIBLE : View.GONE);
         controlView.setVisibility(showInfo ? View.GONE : View.VISIBLE);
     }
@@ -222,7 +317,7 @@ public class GearFragment extends Fragment {
     private void setNewName(String newName) {
         this.newName = newName;
         if (listener != null)
-            listener.onGearFragmentAction(ACTION_RENAME, 0, gear.getId(), gear.isGroup());
+            listener.onGearFragmentAction(ACTION_RENAME, 0, itemId, itemIsGroup);
     }
 
     public String getNewName() {
@@ -237,16 +332,39 @@ public class GearFragment extends Fragment {
     }
 
     public void update() {
-
+        Log.d(TAG, "update()");
+        /*
         powerSlider.setMinValue(gear.getMinPowerInt());
         powerSlider.setMaxValue(gear.getMaxPowerInt());
         powerSlider.setValue(gear.getPowerInt());
         colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
         colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
         colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
+        if (gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) == 0) {
+            boolean colorTempCap = false;
+            int coolest = 0;
+            int warmest = 0;
+            if (gear.isGroup()) {
+                for (DaliGear g : gear.getGroup()) {
+                    if (g.getDataByteInt(DaliGear.DATA_COLOR_TEMP_CAP) != 0) {
+                        colorTempCap = true;
+                        coolest = Math.max(coolest, g.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
+                        warmest = Math.min(warmest, g.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
+                    }
+                }
+            }
+            if (!colorTempCap)
+                colorTempSlider.setVisibility(View.GONE);
+            else {
+                colorTempSlider.setMinValue(warmest);
+                colorTempSlider.setMaxValue(coolest);
+            }
+        }
+        */
+        infoViewText.setText(infoText);
     }
 
-    public interface GearFragmentListener {
-        void onGearFragmentAction(int which, int value, byte gearId, boolean group);
+    public interface Listener {
+        void onGearFragmentAction(int which, int value, int gearId, boolean group);
     }
 }

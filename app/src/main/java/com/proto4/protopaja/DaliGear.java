@@ -13,8 +13,9 @@ public class DaliGear {
 
     private static final String TAG = DaliGear.class.getSimpleName();
 
-    private String name;
-    private ArrayList<DaliGear> group;
+    //private String name;
+
+    private boolean updated;
 
     private byte[] data; // should be {id, status, power, ...}
 
@@ -50,11 +51,11 @@ public class DaliGear {
     private static final byte DEFAULT_POWER_MAX = (byte)254;
 
 
-    public DaliGear(byte[] _data) {
+    /*public DaliGear(byte[] _data) {
         this("unknown", _data);
-    }
+    }*/
 
-    public DaliGear(String _name) {
+    /*public DaliGear(String _name) {
         this(_name, new byte[]{0, 0, 0});
     }
 
@@ -63,9 +64,24 @@ public class DaliGear {
     }
 
     public DaliGear(String _name, byte[] _data) {
-        name = _name;
+        //name = _name;
         data = new byte[DATA_LEN];
+        updated = false;
+        for (int i = 0; i < DATA_LEN; i++)
+            data[i] = i < _data.length ? _data[i] : 0;
+        if (data[DATA_POWER_MIN] == 0)
+            data[DATA_POWER_MIN] = DEFAULT_POWER_MIN;
+        if (data[DATA_POWER_MAX] == 0)
+            data[DATA_POWER_MAX] = DEFAULT_POWER_MAX;
+    }*/
 
+    public DaliGear(byte _id) {
+        this(new byte[]{_id, 0, 0});
+    }
+
+    public DaliGear(byte[] _data) {
+        data = new byte[DATA_LEN];
+        updated = false;
         for (int i = 0; i < DATA_LEN; i++)
             data[i] = i < _data.length ? _data[i] : 0;
         if (data[DATA_POWER_MIN] == 0)
@@ -122,9 +138,9 @@ public class DaliGear {
         return getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100;
     }
 
-    public String getName(){
+    /*public String getName(){
         return name;
-    }
+    }*/
 
     public float getPowerRatio() {
         float pr = (float)(getPowerInt() - getMinPowerInt())/(getMaxPowerInt() - getMinPowerInt());
@@ -132,21 +148,30 @@ public class DaliGear {
         return pr;
     }
 
+    public boolean isUpdated() {
+        return updated;
+    }
+
     // sets
     public void setData(byte[] _data) {
+        updated = false;
         for (int i = 0; i < DATA_LEN; i++)
             data[i] = i < _data.length ? _data[i] : 0;
     }
 
     public void setDataByte(int index, byte value) {
-        if (index < 0 || index >= DATA_LEN)
+        Log.d(TAG, "setDataByte(" + index + ", " + (value < 0 ? 256 + (int)value: (int)value) + ")");
+        updated = false;
+        if (index < 0 || index >= DATA_LEN) {
+            Log.d(TAG, "tried to set data byte out of data array bounds");
             return;
+        }
         data[index] = value;
     }
 
-    public void setId(byte _id) {
+    /*public void setId(byte _id) {
         data[DATA_ID] = _id;
-    }
+    }*/
 
     public void setStatus(byte _status) {
         data[DATA_STATUS] = _status;
@@ -169,9 +194,9 @@ public class DaliGear {
         data[DATA_POWER_MAX] = maxPower;
     }
 
-    public void setName(String _name){
+    /*public void setName(String _name){
         name = _name;
-    }
+    }*/
 
     public void setConstants(byte[] bytes) {
         if (bytes.length < 5) {
@@ -185,11 +210,13 @@ public class DaliGear {
         data[DATA_COLOR_WARMEST] = bytes[4];
     }
 
+    // should only be called when got values from central
     public void update(byte[] bytes) {
         if (bytes.length < 7) {
             Log.w(TAG, "update(): invalid update array, returning");
             return;
         }
+
         data[DATA_STATUS] = bytes[0];
         data[DATA_POWER] = bytes[1];
         data[DATA_COLOR_TEMP] = bytes[2];
@@ -197,61 +224,31 @@ public class DaliGear {
         data[DATA_TEMP_0F] = bytes[4];
         data[DATA_TEMP_1] = bytes[5];
         data[DATA_TEMP_1F] = bytes[6];
+        updated = true;
     }
 
-    public boolean isGroup(){
-        return group != null;
-    }
-
-
-    // returns true if gear was added
-    public boolean addGroupMember(DaliGear gear) {
-        Log.d(TAG, "adding group member: " + gear.getName());
-        if (group == null)
-            group = new ArrayList<>();
-        if (group.contains(gear))
-            return false;
-        group.add(gear);
-        return true;
-    }
-
-    // returns true if gear was removed
-    public boolean removeGroupMember(DaliGear gear){
-        if (group == null)
-            return false;
-        boolean removed = group.remove(gear);
-        if (group.size() == 0)
-            group = null;
-        return removed;
-    }
-
-    public ArrayList<DaliGear> getGroup(){
-        return group;
-    }
-
-
-    public String getInfoString() {
+    public static String getInfoString(DaliGear gear) {
         Log.d(TAG, "getInfoString()");
-        byte status = data[DATA_STATUS];
+        byte status = gear.data[DATA_STATUS];
         String info = "";
         //info += "Power level =         " + getPowerInt() + "\n";
-        info += String.format(Locale.getDefault(), "Power level = %14d\n", getPowerInt());
+        info += String.format(Locale.getDefault(), "Power level = %14d\n", gear.getPowerInt());
         //info += "Power min =           " + getDataByteInt(DATA_POWER_MIN) + "\n";
-        info += String.format(Locale.getDefault(), "Power min = %16d\n", getDataByteInt(DATA_POWER_MIN));
+        info += String.format(Locale.getDefault(), "Power min = %16d\n", gear.getDataByteInt(DATA_POWER_MIN));
         //info += "Power max =           " + getDataByteInt(DATA_POWER_MAX) + "\n";
-        info += String.format(Locale.getDefault(), "Power max = %16d\n", getDataByteInt(DATA_POWER_MAX));
+        info += String.format(Locale.getDefault(), "Power max = %16d\n", gear.getDataByteInt(DATA_POWER_MAX));
         //info += "Color temperature =   " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
-        info += String.format(Locale.getDefault(), "Color temp = %14dK\n", getDataByteInt(DATA_COLOR_TEMP));
+        info += String.format(Locale.getDefault(), "Color temp = %14dK\n", gear.getDataByteInt(DATA_COLOR_TEMP)*100);
         //info += "Color coolest =       " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
-        info += String.format(Locale.getDefault(), "Color coolest = %11dK\n", getDataByteInt(DATA_COLOR_COOLEST)*100);
+        info += String.format(Locale.getDefault(), "Color coolest = %11dK\n", gear.getDataByteInt(DATA_COLOR_COOLEST)*100);
         //info += "Color warmest =       " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
-        info += String.format(Locale.getDefault(), "Color warmest = %11dK\n", getDataByteInt(DATA_COLOR_WARMEST)*100);
+        info += String.format(Locale.getDefault(), "Color warmest = %11dK\n", gear.getDataByteInt(DATA_COLOR_WARMEST)*100);
         //info += "Temp0 =               " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100) + "\n";
         info += String.format(Locale.getDefault(), "Temp0 = %18.2f°C\n",
-                getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100);
+                gear.getDataByteInt(DATA_TEMP_0) + (float)gear.getDataByteInt(DATA_TEMP_0F)/100);
         //info += "Temp1 =               " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100) + "\n";
         info += String.format(Locale.getDefault(), "Temp1 = %18.2f°C\n",
-                getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100);
+                gear.getDataByteInt(DATA_TEMP_1) + (float)gear.getDataByteInt(DATA_TEMP_1F)/100);
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";
         info += (status & STATUS_LAMP_FAILURE) == 0 ? "" : "(!) Lamp failure\n";
         info += (status & STATUS_POWER_ON) == 0 ? "Power off\n" : "Power on\n";

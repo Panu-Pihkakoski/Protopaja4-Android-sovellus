@@ -29,9 +29,10 @@ public class ListFragment extends Fragment {
 
     private ArrayList<ProtoListItem> listItems;
     private ArrayList<ProtoListItem> selectedItems;
+    private int selected;
     private RecyclerView recyclerView;
 
-    private ProtoListItem expandedGroup;
+    private ProtoListItem expandedGroup, lastExpandedGroup;
 
     private boolean isSelecting;
 
@@ -41,6 +42,7 @@ public class ListFragment extends Fragment {
     public static final int ITEM_ACTION_OPEN = 1;
     public static final int ITEM_ACTION_CONNECT = 2;
 
+    public static final int ACTION_EXPAND_GROUP = 4;
     public static final int ACTION_GROUP_SELECTED = 5;
     public static final int ACTION_EXPANDED_GROUP_SELECTED = 6;
     public static final int ACTION_SELECTION_START = 7;
@@ -55,23 +57,25 @@ public class ListFragment extends Fragment {
         ListFragment fragment = new ListFragment();
         fragment.listItems = new ArrayList<>();
         fragment.selectedItems = new ArrayList<>();
+        fragment.selected = 0;
         fragment.isSelecting = false;
         return fragment;
     }
 
-    public void addItem(DaliGear gear) {
-        Log.d(TAG, "adding gear to list");
-        listItems.add(new ProtoListItem(gear));
+    public void addItem(String name, int type, int id) {
+        Log.d(TAG, "adding item to list");
+        listItems.add(new ProtoListItem(name, type, id));
     }
 
-    public void addItem(BluetoothDevice device) {
-        Log.d(TAG, "adding device to list");
-        listItems.add(new ProtoListItem(device));
+    public void addItem(ProtoListItem item) {
+        Log.d(TAG, "adding item to list");
+        listItems.add(item);
     }
 
     public void clear() {
         listItems.clear();
         selectedItems.clear();
+        expandedGroup = null;
         //recyclerView.getAdapter().notifyDataSetChanged();
     }
 
@@ -82,6 +86,7 @@ public class ListFragment extends Fragment {
         }
         isSelecting = false;
         selectedItems.clear();
+        selected = 0;
         ProtoListItem item;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
@@ -96,34 +101,36 @@ public class ListFragment extends Fragment {
         return selectedItems;
     }
 
+    public int getSelected() {
+        return selected;
+    }
+
     public void setListener(Listener _listener) {
         listener = _listener;
     }
 
     public void update() {
+        Log.d(TAG, "update()");
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    public void expandGroup(ProtoListItem group) {
-        Log.d(TAG, "expandGroup()");
+    public void expand(ProtoListItem group, ArrayList<ProtoListItem> items) {
+        Log.d(TAG, "expand()");
+
         ArrayList<ProtoListItem> toRemove = new ArrayList<>();
         int groupPosition = -1;
         for (int i = 0; i < listItems.size(); i++) {
             ProtoListItem item = listItems.get(i);
-            if (!item.isGroup())
+            if (item.getType() == ProtoListItem.TYPE_GEAR)
                 toRemove.add(item);
             else if (item == group)
                 groupPosition = i;
         }
-        if (groupPosition == -1) {
-            Log.w(TAG, "unable to expand group");
-            return;
-        }
+        if (groupPosition == -1)
+            groupPosition = listItems.size()-1;
         if (expandedGroup != group) {
-            ArrayList<DaliGear> gears = group.getGear().getGroup();
-            for (int i = 0; i < gears.size(); i++) {
-                DaliGear g = gears.get(i);
-                listItems.add(++groupPosition, new ProtoListItem(g));
+            for (int i = 0; i < items.size(); i++) {
+                listItems.add(++groupPosition, items.get(i));
                 Log.d(TAG, "added list item on expand");
             }
             expandedGroup = group;
@@ -135,6 +142,7 @@ public class ListFragment extends Fragment {
         for (int i = 0; i < toRemove.size(); i++) {
             listItems.remove(toRemove.get(i));
         }
+
         update();
     }
 
@@ -146,10 +154,13 @@ public class ListFragment extends Fragment {
         isSelecting = true;
         for (int i = 0; i < listItems.size(); i++) {
             item = listItems.get(i);
-            if (!item.isGroup()) {
+            if (!(item.getType() == ProtoListItem.TYPE_GROUP)) {
                 item.setCheckBoxVisible(true);
-                if (i == position)
+                if (i == position) {
+                    Log.d(TAG, "startSelection: item (id=" + item.getId() + ") checked");
                     selectedItems.add(item);    // add long clicked item to selectedItems
+                    selected |= (1 << item.getId());
+                }
                 item.setChecked(i == position); // check long clicked item
                 recyclerView.getAdapter().notifyItemChanged(i);
             }
@@ -161,25 +172,32 @@ public class ListFragment extends Fragment {
         ProtoListItem item = listItems.get(position);
         item.setChecked(!item.isChecked());   // toggle select
         recyclerView.getAdapter().notifyItemChanged(position);
-        if (item.isChecked())
+        if (item.isChecked()) {
+            Log.d(TAG, "select: item (id=" + item.getId() + ") checked");
             selectedItems.add(item);
-        else
+            selected |= (1 << item.getId());
+        } else {
+            Log.d(TAG, "select: item (id=" + item.getId() + ") unchecked");
             selectedItems.remove(item);
+            selected ^= (1 << item.getId());
+        }
         if (selectedItems.isEmpty())
             clearSelection();
 
         // DEBUG
         String si = "";
         for (ProtoListItem i : selectedItems) {
-            si += i.getGear().getName() + "\n";
+            si += i.getName() + "\n";
         }
         Log.d(TAG, "selectedItems (" + selectedItems.size() + "):\n" + si);
+        Log.d(TAG, "selected: " + selected);
     }
 
     public void removeSelectedItems() {
         for (int i = 0; i < selectedItems.size(); i++) {
             listItems.remove(selectedItems.get(i));
         }
+        clearSelection();
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
@@ -190,10 +208,23 @@ public class ListFragment extends Fragment {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    public byte getExpandedGroupId() {
+    public int getExpandedGroupId() {
         if (expandedGroup == null)
-            return (byte)255;
-        return expandedGroup.getGear().getId();
+            return 255;
+        return expandedGroup.getId();
+    }
+
+    public ProtoListItem getExpandedGroup() {
+        return expandedGroup == null ? listItems.get(0) : expandedGroup;
+    }
+
+    public ProtoListItem getLastExpandedGroup() {
+        return lastExpandedGroup == null ? listItems.get(0) : lastExpandedGroup;
+    }
+
+    public boolean isListingGears() {
+        if (listItems.size() == 0) return true;
+        return !(listItems.get(0).getType() == ProtoListItem.TYPE_DEVICE);
     }
 
     @Override
@@ -243,7 +274,7 @@ public class ListFragment extends Fragment {
                 }
 
                 if (isSelecting) {
-                    if (item.isGroup()) {
+                    if (item.getType() == ProtoListItem.TYPE_GROUP) {
                         if (listener != null)
                             listener.onListFragmentAction((item == expandedGroup) ?
                                     ACTION_EXPANDED_GROUP_SELECTED : ACTION_GROUP_SELECTED, item);
@@ -266,9 +297,11 @@ public class ListFragment extends Fragment {
                 final ProtoListItem item = listItems.get(position);
                 if (isSelecting || item.getType() == ProtoListItem.TYPE_DEVICE) // doesn't react to long click
                     return false;
-                if (item.isGroup()) {
+                if (item.getType() == ProtoListItem.TYPE_GROUP) {
                     Log.d(TAG, "long clicked group");
-                    expandGroup(item);
+                    if (listener != null)
+                        listener.onListFragmentAction(ACTION_EXPAND_GROUP, item);
+                    //expandGroup(item);
                 } else {
                     Log.d(TAG, "long clicked gear");
                     startSelection(position);

@@ -85,14 +85,14 @@ public class ProtoListAdapter extends RecyclerView.Adapter<ProtoListAdapter.View
                 holder.checkBox.setChecked(item.isChecked());
                 holder.brIcon.setVisibility(item.isCheckBoxVisible() ? View.GONE : View.VISIBLE);
                 if (holder.brIcon.getVisibility() == View.VISIBLE) {
-                    int br = (int)(item.getGear().getPowerRatio()*255);
-                    int brColor = 0xff000000 + (br << 16) + (br << 8) + br;
-                    holder.brIcon.setColorFilter(brColor);
+                    int br = 255 - (int)(item.getValue()*255);
+                    int filter = br << 24;
+                    holder.brIcon.setColorFilter(filter);
                     Log.d(TAG, "brightness=" + br);
                 }
                 break;
             case ProtoListItem.TYPE_GROUP:
-                holder.title.setText(item.getName() + "  (" + item.getGear().getGroup().size() + ")");
+                holder.title.setText(item.getName());// + "  (" + item.getGear().getGroup().size() + ")");
                 titleColorId = R.color.title_group;
                 holder.checkBox.setVisibility(View.GONE);
                 holder.brIcon.setVisibility(View.GONE);

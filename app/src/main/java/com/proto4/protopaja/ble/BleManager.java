@@ -93,6 +93,7 @@ public class BleManager implements BleGattHandler.GattListener{
             return false;
         }
 
+        /* Keep commented for now
         // Reuse existing connection
         if (deviceAddress != null && address.equalsIgnoreCase(deviceAddress) && gatt != null) {
             Log.d(TAG, "Trying to use an existing BluetoothGatt for connection.");
@@ -104,7 +105,7 @@ public class BleManager implements BleGattHandler.GattListener{
             } else {
                 return false;
             }
-        }
+        }*/
 
         device = adapter.getRemoteDevice(address);
         if (device == null) {

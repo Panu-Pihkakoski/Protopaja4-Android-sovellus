@@ -122,32 +122,25 @@ public class BleScanner {
             String dataString = new String(data);
             if (data != null && data.length > 0) {
                 final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
+                int i = 0;
+                for(byte byteChar : data) {
                     stringBuilder.append(String.format("%02X ", byteChar));
+                    if (i % 8 == 7) stringBuilder.append('\n');
+                    i++;
+                }
                 Log.d(TAG, "[" + result.getDevice().getAddress() + "] " +
                         "Scan record bytes:\n" + stringBuilder.toString() + "\n("
                         + dataString + ")");
             }
 
-            /*
-            // filter ...
-            byte ab0, ab1;
-            boolean f = false;
-            int bc = 5;
-            for (int i = 0; i < data.length - 2; i++) {
-                if (data[i] == (byte)0x19) {
-                    ab0 = data[i+1];
-                    ab1 = data[i+2];
-                    int s = ((int) ab0 << 16) + (int) ab1;
-                    Log.d(TAG, "APPEARANCE: " + s);
-                    if (ab0 == 0xd4 && ab1 == 0x31) {
-                        f = true;
-                        break;
-                    }
-                }
-            }
-            if (!f) return;
-            */
+            // filter
+            // data[25] : 0x19, data[26] : 0x31, data[27] : 0xd4
+            boolean isBlec = (data[25] == (byte)0x19 && data[26] == (byte)0x31 && data[27] == (byte)0xd4);
+            if (isBlec)
+                Log.d(TAG, "BBBBLLLLEEEECCCC");
+
+            if (!isBlec) return;
+
             BluetoothDevice device = result.getDevice();
             if (foundDevices.contains(device))
                 return;

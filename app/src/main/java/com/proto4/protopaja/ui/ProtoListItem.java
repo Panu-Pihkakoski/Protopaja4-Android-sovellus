@@ -17,32 +17,25 @@ public class ProtoListItem {
     public static final int TYPE_GROUP = 1;
     public static final int TYPE_DEVICE = 2;
 
-    private DaliGear gear;
-    private BluetoothDevice device;
-
-    private int type;
+    private int type, id;
+    private float value;
     private String name;
 
     private boolean isChecked, checkBoxVisible;
 
-    public ProtoListItem(DaliGear gear) {
-        this.gear = gear;
+    public ProtoListItem(String name, int type, int id) {
         isChecked = checkBoxVisible = false;
-        name = gear.getName();
-        type = gear.isGroup() ? TYPE_GROUP : TYPE_GEAR;
+        this.name = name;
+        this.type = type;
+        this.id = id;
+        this.value = 0;
     }
 
-    public ProtoListItem(BluetoothDevice device) {
-        this.device = device;
-        isChecked = checkBoxVisible = false;
-        name = device.getName();
-        if (name == null) name = device.getAddress();
-        type = TYPE_DEVICE;
+    public int getId() {
+        return id;
     }
 
     public int getType() {
-        if (type == TYPE_GEAR || type == TYPE_GROUP)
-            type = gear.isGroup() ? TYPE_GROUP : TYPE_GEAR;
         return type;
     }
 
@@ -50,12 +43,12 @@ public class ProtoListItem {
         return name;
     }
 
-    public DaliGear getGear() {
-        return gear;
+    public float getValue() {
+        return value;
     }
 
-    public BluetoothDevice getDevice() {
-        return device;
+    public void setValue(float value) {
+        this.value = value;
     }
 
     public boolean isChecked() {
@@ -66,27 +59,11 @@ public class ProtoListItem {
         return checkBoxVisible;
     }
 
-    public boolean isGroup() {
-        return gear.isGroup();
-    }
-
     public void setChecked(boolean checked) {
         isChecked = checked;
     }
 
     public void setCheckBoxVisible(boolean visible) {
         checkBoxVisible = visible;
-    }
-
-    public void setGear(DaliGear gear) {
-        this.gear = gear;
-        name = gear.getName();
-        type = gear.isGroup() ? TYPE_GROUP : TYPE_GEAR;
-    }
-
-    public void setDevice(BluetoothDevice device) {
-        this.device = device;
-        name = device.getName();
-        if (name == null) name = device.getAddress();
     }
 }

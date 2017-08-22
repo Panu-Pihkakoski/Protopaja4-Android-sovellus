@@ -13,6 +13,12 @@
         <item android:id="@+id/action_show_gear_list"
             android:title="@string/gear_list_title"
             app:showAsAction="never" />
+        <item android:id="@+id/action_disconnect"
+            android:title="Disconnect"
+            app:showAsAction="never" />
+        <item android:id="@+id/action_show_help"
+            android:title="Help"
+            app:showAsAction="never" />
     </group>
 
     <group android:id="@+id/menu_group_grouping">
@@ -29,19 +35,16 @@
         <item android:id="@+id/action_rename_gear"
             android:title="Rename"
             app:showAsAction="never" />
-        <item android:id="@+id/action_show_gear_info"
-            android:title="Info/Control"
-            app:showAsAction="never" />
     </group>
 
 
     <group android:id="@+id/menu_group_debug">
         <item android:id="@+id/action_skip_connect"
-            android:title="skip connect"
+            android:title="[D]: skip connect"
             app:showAsAction="never" />
-        <item android:id="@+id/action_query"
-            android:title="status query"
-            app:showAsAction="never"/>
+        <item android:id="@+id/action_print_groups"
+            android:title="[D]: print groups"
+            app:showAsAction="never" />
     </group>
 
 </menu>
