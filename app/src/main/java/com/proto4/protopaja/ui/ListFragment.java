@@ -127,7 +127,7 @@ public class ListFragment extends Fragment {
                 groupPosition = i;
         }
         if (groupPosition == -1)
-            groupPosition = listItems.size()-1;
+            groupPosition = 0;
         if (expandedGroup != group) {
             for (int i = 0; i < items.size(); i++) {
                 listItems.add(++groupPosition, items.get(i));

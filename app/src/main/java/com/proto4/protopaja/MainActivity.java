@@ -34,7 +34,6 @@ import com.proto4.protopaja.ui.HelpFragment;
 import com.proto4.protopaja.ui.ListFragment;
 import com.proto4.protopaja.ui.ProtoListItem;
 
-import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,9 +75,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private String[] gearNames;
     private String[] groupNames;
 
-    // TODO: remove
-    //private Map<Byte, DaliGear> gearMap;
-    //private Map<Byte, DaliGear> groupMap;
 
     private BluetoothGattService uartService;
 
@@ -129,7 +125,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     // phone to controller
     private static final byte MESSAGE_TYPE_QUERY = 'Q';
     private static final byte MESSAGE_TYPE_COMMAND = 'D';
-    //private static final byte MESSAGE_TYPE_POWER = 'P'; // ?
     private static final byte MESSAGE_TYPE_CTEMP = 'T';
     private static final byte MESSAGE_TYPE_INIT = 'I';
 
@@ -265,9 +260,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                     return true;
                 }
                 int groupId = listFragment.getExpandedGroupId();
-                if (groupId == 255)
+                if (groupId == 255) {
                     Log.d(TAG, "options item action: remove from group: cannot remove from base group");
-                else removeCheckedItemsFromGroup(groupId);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            infoTextView.setText("Unable to remove item(s)");
+                        }
+                    });
+                } else removeCheckedItemsFromGroup(groupId);
                 return true;
             case R.id.action_skip_connect:
                 skipConnect = true;
@@ -360,42 +361,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     protected void onResume() {
         super.onResume();
-        //String filename = getFilesDir().getPath() + "/shared_prefs/" + SHARED_PREFS_MAIN + ".xml";
-        //Log.d(TAG, "onResume: looking for shared preferences in \"" + filename + "\"");
-        //File file = new File(filename);
-        SharedPreferences prefs = getSharedPreferences(SHARED_PREFS_MAIN, MODE_PRIVATE);
-        if (prefs.contains(LAST_DEVICE_ADDRESS) /*file.exists()*/) {
-            Log.d(TAG, "onResume: shared preferences found");
+        loadValues();
+        showFoundDevices();     // or showGears() ?
 
-            String addr = prefs.getString(LAST_DEVICE_ADDRESS, "");
-            if (addr.length() > 0) {
-                deviceAddress = addr;
-                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                if (adapter != null) {
-                    if (BluetoothAdapter.checkBluetoothAddress(deviceAddress)) {  // checks if address is valid
-                        BluetoothDevice device = adapter.getRemoteDevice(deviceAddress);
-                        foundDevices.add(device);
-                    } else Log.d(TAG, "onResume: address found but device couldn't be added: invalid address");
-                } else Log.d(TAG, "onResume: address found but device couldn't be added: adapter == null");
-                SharedPreferences devPrefs = getSharedPreferences(addr, MODE_PRIVATE);
-                int gs = devPrefs.getInt(SAVED_GEARS, 0);
-                for (int i = 0; i < GEARS_LEN; i++) {
-                    if ((gs & (1 << i)) != 0) gears[i] = new DaliGear((byte)i);
-                    gearNames[i] = devPrefs.getString("GEARNAME#" + i, "Lamp " + i);
-                }
-                for (int i = 0; i < GROUPS_LEN; i++) {
-                    groups[i] = devPrefs.getInt("GROUP#" + i, 0);
-                    if (groups[i] != 0)
-                        groupNames[i] = devPrefs.getString("GROUPNAME#" + i, "Group " + i);
-                }
-                showGears();
-            }
-        } else {
-            Log.d(TAG, "onResume: shared preferences not found");
-            if (bleScanner != null && foundDevices.size() == 0) {
-                Log.d(TAG, "onResume: starting scan");
-                startScan();
-            }
+        if (deviceAddress == null || !BluetoothAdapter.checkBluetoothAddress(deviceAddress))
+            Log.d(TAG, "onResume: no valid device address");
+
+        if (bleScanner != null && foundDevices.size() == 0) {
+            Log.d(TAG, "onResume: starting scan");
+            startScan();
         }
     }
 
@@ -411,11 +385,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         // release used bluetooth resources
         bleManager.disconnect();
         bleManager.close();
-
-        // save address of connected device
-        saveValue(DEVICE_ADDRESS);
-        // save auto connect
-        saveValue(AUTO_CONNECT);
 
         super.onDestroy();
     }
@@ -447,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         editor.apply();
     }
 
+    /*
     // saves current value with matching key
     private void saveValue(String key) {
         SharedPreferences.Editor edit = getPreferences(MODE_PRIVATE).edit();
@@ -455,14 +425,37 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         else if (key.equals(AUTO_CONNECT) && bleManager != null)
             edit.putBoolean(key, bleManager.getAutoConnect());
         edit.commit();
-    }
+    }*/
 
     // gets saved values and assigns them to appropriate variables
     private void loadValues() {
-        SharedPreferences prefs = getPreferences(MODE_PRIVATE);
-        deviceAddress = prefs.getString(DEVICE_ADDRESS, null);
-        if (bleManager != null)
-            bleManager.setAutoConnect(prefs.getBoolean(AUTO_CONNECT, false));
+        SharedPreferences prefs = getSharedPreferences(SHARED_PREFS_MAIN, MODE_PRIVATE);
+        if (prefs.contains(LAST_DEVICE_ADDRESS) /*file.exists()*/) {
+            Log.d(TAG, "loadValues: shared preferences found");
+
+            String addr = prefs.getString(LAST_DEVICE_ADDRESS, "");
+            if (addr.length() > 0) {
+                deviceAddress = addr;
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter != null) {
+                    if (BluetoothAdapter.checkBluetoothAddress(deviceAddress)) {  // checks if address is valid
+                        BluetoothDevice device = adapter.getRemoteDevice(deviceAddress);
+                        foundDevices.add(device);
+                    } else Log.d(TAG, "loadValues: address found but device couldn't be added: invalid address");
+                } else Log.d(TAG, "loadValues: address found but device couldn't be added: adapter == null");
+                SharedPreferences devPrefs = getSharedPreferences(addr, MODE_PRIVATE);
+                int gs = devPrefs.getInt(SAVED_GEARS, 0);
+                for (int i = 0; i < GEARS_LEN; i++) {
+                    if ((gs & (1 << i)) != 0) gears[i] = new DaliGear((byte)i);
+                    gearNames[i] = devPrefs.getString("GEARNAME#" + i, "Lamp " + i);
+                }
+                for (int i = 0; i < GROUPS_LEN; i++) {
+                    groups[i] = devPrefs.getInt("GROUP#" + i, 0);
+                    if (groups[i] != 0)
+                        groupNames[i] = devPrefs.getString("GROUPNAME#" + i, "Group " + i);
+                }
+            }
+        }
     }
 
 
@@ -562,7 +555,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             public void run() {
 
                 infoTextView.setVisibility(View.GONE);
-                toolbar.setTitle(isGroup ? (id < 0 || id >= GROUPS_LEN) ? "All" : groupNames[id] : gearNames[id]);
+                toolbar.setTitle(isGroup ? (id < 0 || id >= GROUPS_LEN) ?
+                        getResources().getString(R.string.all_lamps) : groupNames[id] : gearNames[id]);
             }
         });
 
@@ -637,7 +631,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             public void run() {
                 listFragment.clear();
                 // add group containing all gears
-                ProtoListItem item = new ProtoListItem("All", ProtoListItem.TYPE_GROUP, 255);
+                ProtoListItem item = new ProtoListItem(getResources().getString(R.string.all_lamps),
+                        ProtoListItem.TYPE_GROUP, 255);
                 listFragment.addItem(item);
                 // add other groups
                 for (int i = 0; i < GROUPS_LEN; i++) {
@@ -712,8 +707,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 break;
             case GearFragment.ACTION_RENAME: // rename gear
                 final String newName = gearFragment.getNewName(); // get new name from fragment
-                if (isGroup) groupNames[id] = newName;
-                else gearNames[id] = newName;
+                if (isGroup && id < GROUPS_LEN) groupNames[id] = newName;
+                //else if (isGroup) /*tried to rename group for all lamps*/;
+                else if (!isGroup) gearNames[id] = newName;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -786,7 +782,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         // send power level to central unit
         byte[] data;
-        if (id != GROUP_ALL)
+        if (id != 255)
             data = new byte[]{MESSAGE_TYPE_COMMAND, (byte)id, 0, (byte) powerLevel, MESSAGE_END};
         else data = new byte[]{MESSAGE_TYPE_BROADCAST, (byte)powerLevel, MESSAGE_END};
         sendData(data);
@@ -883,11 +879,17 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
         if (groupId == 255) {   // new group
             int i = 0;
-            while (groups[i] != 0 && i < GROUPS_LEN) {
+            while (i < GROUPS_LEN && groups[i] != 0) {
                 i++;
             }
             if (i == GROUPS_LEN) {
                 Log.d(TAG, "addCheckedItemsToGroup: unable to create new group: group array is full");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        infoTextView.setText("Unable to create more groups");
+                    }
+                });
                 return;
             }
             newGroup = true;
@@ -986,7 +988,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (toUpdate == null) {     // add new gear
             Log.d(TAG, "New gear with id=" + (int)gearId);
 
-            final String gearName = "New gear [" + (int)gearId + "]";
+            final String gearName = "New lamp [" + (int)gearId + "]";
             toUpdate = new DaliGear((byte)gearId);
             gears[gearId] = toUpdate;
             gearNames[gearId] = gearName;
@@ -1025,7 +1027,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         if (toUpdate == null) {     // add new gear
             Log.d(TAG, "New gear with id=" + gearId);
 
-            final String gearName = "New gear [" + gearId + "]";
+            final String gearName = "New lamp [" + gearId + "]";
             toUpdate = new DaliGear((byte)gearId);
             gears[gearId] = toUpdate;
             gearNames[gearId] = gearName;
@@ -1129,7 +1131,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 if (foundDevices.size() == 1) listFragment.clear();
                 listFragment.addItem(item);
                 listFragment.update();
-                infoTextView.setText(foundDevices.size() + " devices found");
+                infoTextView.setText(foundDevices.size() + (foundDevices.size() > 1 ? " devices found" : " device found"));
             }
         });
     }
@@ -1162,16 +1164,23 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     public void onConnected(){
         Log.d(TAG, "Device connected");
         connectedDevice = bleManager.getConnectedDevice();
-        if (connectedDevice != null)
-            deviceAddress = connectedDevice.getAddress();
-        else deviceAddress = "00:00:00:00:00:00";
 
-        // TODO: change
-        gears = new DaliGear[GEARS_LEN];
-        Arrays.fill(groups, 0);
+        boolean sameAsLastTime = false;
+
+        if (connectedDevice != null) {
+            if (deviceAddress != null)
+                sameAsLastTime = deviceAddress.equals(connectedDevice.getAddress());
+            deviceAddress = connectedDevice.getAddress();
+        } else deviceAddress = "00:00:00:00:00:00";
+
+        if (!sameAsLastTime) {
+            gears = new DaliGear[GEARS_LEN];
+            Arrays.fill(groups, 0);
+        }
 
         // add group to hold all gears
-        final ProtoListItem item = new ProtoListItem("All", ProtoListItem.TYPE_GROUP, 255);
+        final ProtoListItem item = new ProtoListItem(getResources().getString(R.string.all_lamps),
+                ProtoListItem.TYPE_GROUP, 255);
 
         runOnUiThread(new Runnable() {
             @Override

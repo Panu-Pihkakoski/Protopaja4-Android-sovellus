@@ -10,10 +10,12 @@
     <string name="action_navi_control">Control</string>
     <string name="action_navi_data">Data</string>
 
-    <string name="gear_list_title">Lights</string>
+    <string name="gear_list_title">Lamps</string>
 
     <string name="no_devices">No devices</string>
-    <string name="no_gears">No lights</string>
+    <string name="no_gears">No lamps</string>
+
+    <string name="all_lamps">All lamps</string>
 
     <string name="brightness_icon_desc">Brightness</string>
     <string name="temp_icon_desc">Temperature</string>
@@ -28,6 +30,6 @@
                         To start selecting lamps, press and hold on a lamp.\n
                         Click on \"Create new group\" to create new group from selected lamps.\n
                         Click on \"Remove\" to remove selected lamps from group.\n
-                        Note: Lamps from group \"All\" cannot be removed.</string>
+                        Note: Lamps from group \"All lamps\" cannot be removed.</string>
 
 </resources>

@@ -6,7 +6,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#808080"
+        android:background="@color/main_bg"
         android:padding="5dp"
         android:elevation="4dp"
         android:id="@+id/relativeLayout">
@@ -15,7 +15,7 @@
             android:id="@+id/list_row_boundaries"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#101010"
+            android:background="@color/main_bg"
             android:elevation="4dp">
 
             <TextView
