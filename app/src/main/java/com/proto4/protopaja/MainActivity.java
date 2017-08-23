@@ -229,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         overflowMenu = menu;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main_menu, menu);
-        setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
+        setVisibleMenuGroups((byte)(F_MENU_MAIN)); // | F_MENU_DEBUG));
         return true;
     }
 
@@ -383,15 +383,15 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     @Override
     protected void onDestroy(){
         // release used bluetooth resources
-        bleManager.disconnect();
-        bleManager.close();
-
+        disconnect();
+        
         super.onDestroy();
     }
-
+    
+    // save names and groups in file named [deviceAddress]
     private void saveValues() {
         Log.d(TAG, "saveValues");
-        String filename = deviceAddress != null && deviceAddress.length() > 0 ? deviceAddress : "";
+        String filename = deviceAddress != null ? deviceAddress : "";
         if (filename.length() == 0) {
             Log.w(TAG, "saveValues: no device address, not saving values");
             return;
@@ -399,11 +399,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         SharedPreferences.Editor editor0 = getSharedPreferences(SHARED_PREFS_MAIN, MODE_PRIVATE).edit();
         editor0.putString(LAST_DEVICE_ADDRESS, deviceAddress);
         editor0.apply();
+        
         SharedPreferences.Editor editor = getSharedPreferences(filename, MODE_PRIVATE).edit();
 
         int savedGears = 0;
-
-
+        
         for (int i = 0; i < GEARS_LEN; i++) {
             savedGears |= gears[i] != null ? (1 << i) : 0;
             editor.putString("GEARNAME#" + i, (gears[i] != null && gearNames[i] != null) ? gearNames[i] : "");
@@ -416,23 +416,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         editor.apply();
     }
 
-    /*
-    // saves current value with matching key
-    private void saveValue(String key) {
-        SharedPreferences.Editor edit = getPreferences(MODE_PRIVATE).edit();
-        if (key.equals(DEVICE_ADDRESS) && deviceAddress != null)
-            edit.putString(key, deviceAddress);
-        else if (key.equals(AUTO_CONNECT) && bleManager != null)
-            edit.putBoolean(key, bleManager.getAutoConnect());
-        edit.commit();
-    }*/
-
-    // gets saved values and assigns them to appropriate variables
+    // loads saved values for last device connected
     private void loadValues() {
         SharedPreferences prefs = getSharedPreferences(SHARED_PREFS_MAIN, MODE_PRIVATE);
-        if (prefs.contains(LAST_DEVICE_ADDRESS) /*file.exists()*/) {
+        if (prefs.contains(LAST_DEVICE_ADDRESS)) {
             Log.d(TAG, "loadValues: shared preferences found");
-
+            
             String addr = prefs.getString(LAST_DEVICE_ADDRESS, "");
             if (addr.length() > 0) {
                 deviceAddress = addr;
@@ -443,6 +432,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                         if (!foundDevices.contains(device)) foundDevices.add(device);
                     } else Log.d(TAG, "loadValues: address found but device couldn't be added: invalid address");
                 } else Log.d(TAG, "loadValues: address found but device couldn't be added: adapter == null");
+                
+                // load groups and names
                 SharedPreferences devPrefs = getSharedPreferences(addr, MODE_PRIVATE);
                 int gs = devPrefs.getInt(SAVED_GEARS, 0);
                 for (int i = 0; i < GEARS_LEN; i++) {
@@ -455,10 +446,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                         groupNames[i] = devPrefs.getString("GROUPNAME#" + i, "Group " + i);
                 }
             }
-        }
+        } else Log.d(TAG, "loadValues: shared preferences not found");
     }
-
-
+    
     private void showHelp() {
         if (helpFragment == null) {
             helpFragment = new HelpFragment();
@@ -584,7 +574,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 .commit(); // sets gear list fragment on fragment container
 
         showBackNavigation(false);
-        setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
+        setVisibleMenuGroups((byte)(F_MENU_MAIN));// | F_MENU_DEBUG));
 
         runOnUiThread(new Runnable() {
             @Override
@@ -753,7 +743,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 setVisibleMenuGroups(F_MENU_GEAR_SELECTION);
                 break;
             case ListFragment.ACTION_SELECTION_END:
-                setVisibleMenuGroups((byte)(F_MENU_MAIN | F_MENU_DEBUG));
+                setVisibleMenuGroups((byte)(F_MENU_MAIN));// | F_MENU_DEBUG));
                 break;
             default:
                 Log.d(TAG, "unknown gear list fragment action");
@@ -1299,10 +1289,14 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
         bleManager.disconnect();
-        if (bleScanner == null)
+        if (bleScanner == null) {
+            Log.d(TAG, "startScan: bleScanner was null");
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
-        if (!bleScanner.isReady())
+        }
+        if (!bleScanner.isReady()) {
+            Log.d(TAG, "startScan: bleScanner was not ready");
             bleScanner = new BleScanner(bleManager.getAdapter(this), this);
+        }
         foundDevices.clear();
         showFoundDevices();
 
