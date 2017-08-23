@@ -34,6 +34,7 @@ import com.proto4.protopaja.ui.HelpFragment;
 import com.proto4.protopaja.ui.ListFragment;
 import com.proto4.protopaja.ui.ProtoListItem;
 
+import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,15 +51,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private ProgressBar progressBar;
 
     private Menu overflowMenu;
-    // Overflow menu group flags
-    private static final byte F_MENU_MAIN = 1;
-    private static final byte F_MENU_GEAR = 2;
-    private static final byte F_MENU_GEAR_SELECTION = 4;
-    private static final byte F_MENU_DEBUG = 8;
 
     private TextView infoTextView;
-
-    private FrameLayout fragmentLayout;
 
     private Fragment activeFragment;
     private GearFragment gearFragment;
@@ -66,6 +60,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private HelpFragment helpFragment;
 
     private ProtoListItem lastExpandedItem;
+
+    // Overflow menu group flags
+    private static final byte F_MENU_MAIN = 1;
+    private static final byte F_MENU_GEAR = 2;
+    private static final byte F_MENU_GEAR_SELECTION = 4;
+    private static final byte F_MENU_DEBUG = 8;
 
 
     // Bluetooth
@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
 
         // layout for holding fragments
-        fragmentLayout = (FrameLayout) findViewById(R.id.main_fragment_content);
+        FrameLayout fragmentLayout = (FrameLayout) findViewById(R.id.main_fragment_content);
         fragmentLayout.setVisibility(View.VISIBLE);
         fragmentLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -194,7 +194,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         showListFragment();
 
         // bleManager provides bluetooth methods
-        bleManager = new BleManager(this, this);
+        bleManager = new BleManager(this);
 
         // check whether bluetooth is enabled or not, request enable if not
         if (!bluetoothEnabled()) {
@@ -204,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         requestLocationPermissionIfNeeded(); // location permission is needed to get scan results
 
         // bleScanner provides bluetooth scan methods
-        bleScanner = new BleScanner(bleManager.getAdapter(this), this);
+        bleScanner = new BleScanner(bleManager.getAdapter(this));
         scanning = skipConnect = false;
 
     }
@@ -272,6 +272,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                     str += "\n";
                 }
                 Log.d(TAG, str);
+                return true;
+            case R.id.action_clear_shared_prefs:
+                clearAllSharedPreferences();
                 return true;
             // gear fragment actions
             case R.id.action_rename_gear:
@@ -350,6 +353,11 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         loadValues();
         showFoundDevices();     // or showGears() ?
 
+        if (bleManager == null) bleManager = new BleManager(this);
+        bleManager.setListener(this);
+        if (bleScanner == null) bleScanner = new BleScanner(bleManager.getAdapter(this));
+        bleScanner.setListener(this);
+
         if (deviceAddress == null || !BluetoothAdapter.checkBluetoothAddress(deviceAddress))
             Log.d(TAG, "onResume: no valid device address");
 
@@ -361,17 +369,33 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     @Override
     protected void onPause() {
-        super.onPause();
         Log.d(TAG, "onPause: saving values");
         saveValues();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop");
+        
+        bleScanner.setListener(null);
+        bleManager.setListener(null);
+
+        super.onStop();
     }
 
     @Override
     protected void onDestroy(){
-        // release used bluetooth resources
         disconnect();
-        
+        bleManager = null;
+        bleScanner = null;
         super.onDestroy();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        Log.d(TAG, "onTrimMemory: level=" + level);
+        super.onTrimMemory(level);
     }
     
     // save names and groups in file named [deviceAddress]
@@ -400,6 +424,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             editor.putString("GROUPNAME#" + i, (groupNames[i] != null) ? groupNames[i] : "");
         }
         editor.apply();
+        Log.d(TAG, "saveValues: values saved");
     }
 
     // loads saved values for last device connected
@@ -435,6 +460,20 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         } else Log.d(TAG, "loadValues: shared preferences not found");
     }
 
+    private void clearAllSharedPreferences() {
+        String filename = "/data/data/" + getPackageName() + "/shared_prefs/";
+        Log.d(TAG, "clearAllSharedPreferences: looking for shared preferences in " + filename);
+        File sharedPreferenceFile = new File(filename);
+        File[] listFiles = sharedPreferenceFile.listFiles();
+        if (listFiles == null) {
+            Log.w(TAG, "clearAllSharedPreferences: shared preferences files not found");
+            return;
+        } else Log.d(TAG, "clearAllSharedPreferences: preferences found");
+        for (File file : listFiles) {
+            file.delete();
+        }
+        Log.d(TAG, "clearAllSharedPreferences: deleted " + listFiles.length + " files");
+    }
 
     // methods for manipulating ui
 
@@ -574,7 +613,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
 
     private void showFoundDevices() {
-        if (activeFragment != listFragment) showListFragment();
+        if (activeFragment != listFragment || listFragment == null) showListFragment();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -597,7 +636,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     private void showGears() {
-        if (activeFragment != listFragment) showListFragment();
+        if (activeFragment != listFragment || listFragment == null) showListFragment();
 
         runOnUiThread(new Runnable() {
             @Override
@@ -1265,11 +1304,13 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         bleManager.disconnect();
         if (bleScanner == null) {
             Log.d(TAG, "startScan: bleScanner was null");
-            bleScanner = new BleScanner(bleManager.getAdapter(this), this);
+            bleScanner = new BleScanner(bleManager.getAdapter(this));
+            bleScanner.setListener(this);
         }
         if (!bleScanner.isReady()) {
             Log.d(TAG, "startScan: bleScanner was not ready");
-            bleScanner = new BleScanner(bleManager.getAdapter(this), this);
+            bleScanner = new BleScanner(bleManager.getAdapter(this));
+            bleScanner.setListener(this);
         }
         foundDevices.clear();
         showFoundDevices();
@@ -1277,10 +1318,9 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                //showListFragment();
                 listFragment.clear();
                 listFragment.update();
-                infoTextView.setText("No devices");
+                infoTextView.setText(R.string.no_devices);
                 infoTextView.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
                 toolbar.setTitle("Scanning...");
@@ -1297,7 +1337,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void connect(String address){
         Log.d(TAG, "Connecting to " + address);
-        //onConnected(); // skip actual connection
         bleManager.connect(this, address);
     }
 
@@ -1307,7 +1346,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
         Log.d(TAG, "Connecting to " + device.getAddress());
-        //onConnected(); // skip actual connection
         bleManager.connect(this, device.getAddress());
     }
 
@@ -1332,28 +1370,27 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 final byte[] chunk = Arrays.copyOfRange(data, i, Math.min(i + TX_MAX_CHARS, data.length));
                 bleManager.writeService(uartService, UUID_TX, chunk);
             }
-        } else {
-            Log.w(TAG, "Uart Service not discovered. Unable to send data");
-        }
+        } else Log.w(TAG, "Uart Service not discovered. Unable to send data");
     }
 
     private void parseMessage(byte[] bytes) {
         final String data = new String(bytes, Charset.forName("UTF-8"));
-        Log.d(TAG, "parsing message: \"" + data + "\"");
+        Log.d(TAG, "parseMessage: message: \"" + data + "\"");
         switch (bytes[0]) {     // switch message type
             case MESSAGE_TYPE_GEAR_CONST:
-                Log.d(TAG, "message: gear constants");
+                Log.d(TAG, "parseMessage: gear constants");
                 setGearConstants(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
             case MESSAGE_TYPE_GEAR_UPDATE:
-                Log.d(TAG, "message: gear update");
+                Log.d(TAG, "parseMessage: gear update");
                 updateGear(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
             case MESSAGE_TYPE_GROUP:
+                Log.d(TAG, "parseMessage: group message");
                 parseGroupMessage(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
             case MESSAGE_TYPE_EXCEPTION:    // not implemented
-                Log.d(TAG, "message: exception");
+                Log.d(TAG, "parseMessage: exception");
                 // handle exception
                 break;
             default:
@@ -1365,16 +1402,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void parseGroupMessage(byte[] bytes) {
         if (bytes.length < 3) return;
         int groupId = bytes[0] < 0 ? bytes[0] + 256 : bytes[0];
-        if (groupId > GROUPS_LEN-1)
+        if (groupId >= GROUPS_LEN)
             return;
         int gearId = bytes[2] < 0 ? bytes[2] + 256 : bytes[2];
-        if (gearId > GEARS_LEN-1)
+        if (gearId >= GEARS_LEN)
             return;
         if (bytes[1] == '+') {
             groups[groupId] |= (1 << gearId);
         } else if (bytes[1] == '-') {
             groups[groupId] &= (0xffff ^ (1 << gearId));
-        }
+        } else Log.d(TAG, "parseGroupMessage: invalid group message");
 
         Log.d(TAG, "group " + groupId + " after modification: " + groups[groupId]);
     }

@@ -2,7 +2,6 @@ package com.proto4.protopaja;
 
 import android.util.Log;
 
-import java.util.ArrayList;
 import java.util.Locale;
 
 public class DaliGear {

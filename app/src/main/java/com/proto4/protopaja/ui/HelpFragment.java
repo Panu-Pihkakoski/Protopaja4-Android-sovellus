@@ -1,6 +1,5 @@
 package com.proto4.protopaja.ui;
 
-import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -12,8 +11,8 @@ import android.widget.TextView;
 
 import com.proto4.protopaja.R;
 
-/**
- * Created by user on 17.08.17.
+/*
+ *  Help page fragment
  */
 
 public class HelpFragment extends Fragment {

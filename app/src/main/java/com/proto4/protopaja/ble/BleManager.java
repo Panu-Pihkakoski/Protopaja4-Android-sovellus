@@ -40,14 +40,17 @@ public class BleManager implements BleGattHandler.GattListener{
     private String deviceAddress;
     private boolean autoConnect;
 
-    public BleManager(Context context, BleManagerListener _listener){
+    public BleManager(Context context){
         adapter = getAdapter(context);
         if (adapter == null || !adapter.isEnabled())
             Log.e(TAG, "Unable to obtain bluetooth adapter");
-        listener = _listener;
         gattHandler = BleGattHandler.createHandler(this);
         connectionState = STATE_DISCONNECTED;
         autoConnect = false;
+    }
+
+    public void setListener(BleManagerListener listener) {
+        this.listener = listener;
     }
 
     public boolean getAutoConnect() {

@@ -12,9 +12,6 @@ import android.bluetooth.le.ScanSettings;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
-import android.view.View;
-
-import com.proto4.protopaja.R;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,14 +30,17 @@ public class BleScanner {
 
     public static final int DEFAULT_SCAN_PERIOD = 10000; // 10 secs
 
-    public BleScanner(BluetoothAdapter adapter, ScanListener listener){
+    public BleScanner(BluetoothAdapter adapter){
         if (adapter != null)
             scanner = adapter.getBluetoothLeScanner();
         scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
         scanFilters = new ArrayList<>();
         foundDevices = new ArrayList<>();
-        scanListener = listener;
         handler = new Handler();
+    }
+
+    public void setListener(ScanListener listener) {
+        this.scanListener = listener;
     }
 
     public ArrayList<BluetoothDevice> getFoundDevices() {

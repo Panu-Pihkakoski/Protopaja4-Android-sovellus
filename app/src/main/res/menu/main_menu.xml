@@ -45,6 +45,9 @@
         <item android:id="@+id/action_print_groups"
             android:title="[D]: print groups"
             app:showAsAction="never" />
+        <item android:id="@+id/action_clear_shared_prefs"
+            android:title="clear prefs"
+            app:showAsAction="never" />
     </group>
 
 </menu>
