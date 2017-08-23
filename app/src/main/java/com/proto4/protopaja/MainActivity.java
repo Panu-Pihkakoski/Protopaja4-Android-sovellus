@@ -440,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 if (adapter != null) {
                     if (BluetoothAdapter.checkBluetoothAddress(deviceAddress)) {  // checks if address is valid
                         BluetoothDevice device = adapter.getRemoteDevice(deviceAddress);
-                        foundDevices.add(device);
+                        if (!foundDevices.contains(device)) foundDevices.add(device);
                     } else Log.d(TAG, "loadValues: address found but device couldn't be added: invalid address");
                 } else Log.d(TAG, "loadValues: address found but device couldn't be added: adapter == null");
                 SharedPreferences devPrefs = getSharedPreferences(addr, MODE_PRIVATE);
@@ -641,7 +641,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                         groupNames[i] = "Group [" + i + "]";
                     listFragment.addItem(groupNames[i], ProtoListItem.TYPE_GROUP, i);
                 }
-                expandListGroup(null);
+                expandListGroup(null, true);
                 listFragment.update();
 
                 if (gears[0] != null) {
@@ -739,7 +739,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 break;
             case ListFragment.ACTION_EXPAND_GROUP:
                 if (item == null) break;
-                expandListGroup(item);
+                expandListGroup(item, false);
                 break;
             case ListFragment.ACTION_GROUP_SELECTED:
                 if (item == null) break;
@@ -946,7 +946,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         });
     }
 
-    private void expandListGroup(ProtoListItem item) {
+    private void expandListGroup(ProtoListItem item, boolean force) {
         if (item == null) item = lastExpandedItem;
         if (item == null) return;
         int id = item.getId();
@@ -965,7 +965,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             Log.d(TAG, "expandListGroup: nothing to expand");
             return;
         }
-        listFragment.expand(item, items);
+        listFragment.expand(id, items, force);
         lastExpandedItem = item;
     }
 

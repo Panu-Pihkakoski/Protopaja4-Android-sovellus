@@ -39,7 +39,8 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_margin="8dp"
-                android:elevation="4dp" />
+                android:elevation="4dp"
+                android:buttonTint="@color/checkbox"/>
 
             <ImageView
                 android:id="@+id/list_item_brightness_icon"

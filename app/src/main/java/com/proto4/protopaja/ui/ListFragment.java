@@ -32,7 +32,7 @@ public class ListFragment extends Fragment {
     private int selected;
     private RecyclerView recyclerView;
 
-    private ProtoListItem expandedGroup, lastExpandedGroup;
+    private int expandedGroupId;
 
     private boolean isSelecting;
 
@@ -75,7 +75,7 @@ public class ListFragment extends Fragment {
     public void clear() {
         listItems.clear();
         selectedItems.clear();
-        expandedGroup = null;
+        expandedGroupId = 0;
         //recyclerView.getAdapter().notifyDataSetChanged();
     }
 
@@ -114,7 +114,7 @@ public class ListFragment extends Fragment {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    public void expand(ProtoListItem group, ArrayList<ProtoListItem> items) {
+    /*public void expand(ProtoListItem group, ArrayList<ProtoListItem> items) {
         Log.d(TAG, "expand()");
 
         ArrayList<ProtoListItem> toRemove = new ArrayList<>();
@@ -137,6 +137,39 @@ public class ListFragment extends Fragment {
         } else {
             Log.d(TAG, "group was already expanded");
             expandedGroup = null;
+        }
+
+        for (int i = 0; i < toRemove.size(); i++) {
+            listItems.remove(toRemove.get(i));
+        }
+
+        update();
+    }*/
+    public void expand(int groupId, ArrayList<ProtoListItem> items, boolean forceExpand) {
+        Log.d(TAG, "expand()");
+
+        ArrayList<ProtoListItem> toRemove = new ArrayList<>();
+        int groupPosition = -1;
+        for (int i = 0; i < listItems.size(); i++) {
+            ProtoListItem item = listItems.get(i);
+            if (item.getType() == ProtoListItem.TYPE_GEAR)
+                toRemove.add(item);
+            else if (item.getId() == groupId)
+                groupPosition = i;
+        }
+        if (groupPosition == -1) {
+            Log.d(TAG, "expand: group not found");
+            groupPosition = 0;
+        }
+        if (expandedGroupId != groupId || forceExpand) {
+            for (int i = 0; i < items.size(); i++) {
+                listItems.add(++groupPosition, items.get(i));
+                Log.d(TAG, "added list item on expand");
+            }
+            expandedGroupId = groupId;
+        } else {
+            Log.d(TAG, "group was already expanded");
+            expandedGroupId = -1;
         }
 
         for (int i = 0; i < toRemove.size(); i++) {
@@ -202,24 +235,34 @@ public class ListFragment extends Fragment {
     }
 
     public void removeExpandedGroup() {
-        if (expandedGroup == null) return;
-        listItems.remove(expandedGroup);
-        expandedGroup = null;
+        if (expandedGroupId == -1 || expandedGroupId == 0) return;
+        ProtoListItem expanded = getExpandedGroup();
+        if (expanded == null) {
+            Log.d(TAG, "removeExpandedGroup: expanded group not found");
+            return;
+        }
+        listItems.remove(expanded);
+        expandedGroupId = -1;
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
     public int getExpandedGroupId() {
-        if (expandedGroup == null)
+        if (expandedGroupId == -1)
             return 255;
-        return expandedGroup.getId();
+        return expandedGroupId;
     }
 
     public ProtoListItem getExpandedGroup() {
-        return expandedGroup == null ? listItems.get(0) : expandedGroup;
+        return getItemById(expandedGroupId);
     }
 
-    public ProtoListItem getLastExpandedGroup() {
-        return lastExpandedGroup == null ? listItems.get(0) : lastExpandedGroup;
+    public ProtoListItem getItemById(int id) {
+        int pos = 0;
+        while (pos < listItems.size() && listItems.get(pos).getId() != id) {
+            pos++;
+        }
+        if (pos == listItems.size()) return null;
+        return listItems.get(pos);
     }
 
     public boolean isListingGears() {
@@ -276,7 +319,7 @@ public class ListFragment extends Fragment {
                 if (isSelecting) {
                     if (item.getType() == ProtoListItem.TYPE_GROUP) {
                         if (listener != null)
-                            listener.onListFragmentAction((item == expandedGroup) ?
+                            listener.onListFragmentAction((item.getId() == expandedGroupId) ?
                                     ACTION_EXPANDED_GROUP_SELECTED : ACTION_GROUP_SELECTED, item);
                     } else {
                         select(position);

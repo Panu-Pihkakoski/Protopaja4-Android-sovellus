@@ -35,6 +35,7 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final float VALUE_ARC_START = -180;
 
+    private static final int PADDING = 20;
 
     public RoundSlider(Context context) {
         super(context);
@@ -144,10 +145,10 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         Log.d(TAG, "onLayout");
-        width = r-l; height = b-t;
+        width = r-l-PADDING*2; height = b-t;
         float radius = Math.min(width/2, height);
         if (slider == null)
-            slider = new Slider(width/2, radius, radius);
+            slider = new Slider(width/2+PADDING, radius, radius);
         super.onLayout(changed, l, t, r, b);
     }
 
@@ -176,13 +177,13 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
                 else if (rad < 0)                                   // value to max
                     value = maxValue;
             }
-            Log.d(TAG, "power to listener...");
+            Log.d(TAG, "value to listener...");
             if (listener != null)
                 listener.onValueSet((int)value);
         } else {
             float rad = (float)Math.atan2(y-slider.posy, x - slider.posx);
             if (flipped) rad *= -1;
-            Log.d(TAG, "rad=" + rad);
+            //Log.d(TAG, "rad=" + rad);
             if (rad > -Math.PI && rad < 0)
                 value = (float)(1+rad/Math.PI)*(maxValue-minValue) + minValue;
             else if (rad > Math.PI/2)

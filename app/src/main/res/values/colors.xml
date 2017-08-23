@@ -16,4 +16,5 @@
     <color name="title_group">#800000</color>
     <color name="title_default">#0f0f0f</color>
     <color name="info_text">#808080</color>
+    <color name="checkbox">#202020</color>
 </resources>
