@@ -2,8 +2,6 @@ package com.proto4.protopaja.ui;
 
 import android.app.Activity;
 import android.app.Fragment;
-import android.bluetooth.BluetoothDevice;
-import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -12,16 +10,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.proto4.protopaja.DaliController;
-import com.proto4.protopaja.DaliGear;
 import com.proto4.protopaja.R;
 
 import java.util.ArrayList;
-
-/**
- * Created by user on 12.08.17.
- */
-
 
 public class ListFragment extends Fragment {
 
@@ -114,37 +105,6 @@ public class ListFragment extends Fragment {
         recyclerView.getAdapter().notifyDataSetChanged();
     }
 
-    /*public void expand(ProtoListItem group, ArrayList<ProtoListItem> items) {
-        Log.d(TAG, "expand()");
-
-        ArrayList<ProtoListItem> toRemove = new ArrayList<>();
-        int groupPosition = -1;
-        for (int i = 0; i < listItems.size(); i++) {
-            ProtoListItem item = listItems.get(i);
-            if (item.getType() == ProtoListItem.TYPE_GEAR)
-                toRemove.add(item);
-            else if (item == group)
-                groupPosition = i;
-        }
-        if (groupPosition == -1)
-            groupPosition = 0;
-        if (expandedGroup != group) {
-            for (int i = 0; i < items.size(); i++) {
-                listItems.add(++groupPosition, items.get(i));
-                Log.d(TAG, "added list item on expand");
-            }
-            expandedGroup = group;
-        } else {
-            Log.d(TAG, "group was already expanded");
-            expandedGroup = null;
-        }
-
-        for (int i = 0; i < toRemove.size(); i++) {
-            listItems.remove(toRemove.get(i));
-        }
-
-        update();
-    }*/
     public void expand(int groupId, ArrayList<ProtoListItem> items, boolean forceExpand) {
         Log.d(TAG, "expand()");
 

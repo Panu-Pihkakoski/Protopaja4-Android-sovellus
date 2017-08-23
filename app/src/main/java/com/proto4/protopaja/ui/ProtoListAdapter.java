@@ -15,10 +15,6 @@ import com.proto4.protopaja.R;
 
 import java.util.ArrayList;
 
-/**
- * Created by user on 12.08.17.
- */
-
 public class ProtoListAdapter extends RecyclerView.Adapter<ProtoListAdapter.ViewHolder> {
 
     private static final String TAG = ProtoListAdapter.class.getSimpleName();
@@ -92,7 +88,7 @@ public class ProtoListAdapter extends RecyclerView.Adapter<ProtoListAdapter.View
                 }
                 break;
             case ProtoListItem.TYPE_GROUP:
-                holder.title.setText(item.getName());// + "  (" + item.getGear().getGroup().size() + ")");
+                holder.title.setText(item.getName());
                 titleColorId = R.color.title_group;
                 holder.checkBox.setVisibility(View.GONE);
                 holder.brIcon.setVisibility(View.GONE);

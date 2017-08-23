@@ -1,13 +1,5 @@
 package com.proto4.protopaja.ui;
 
-import android.bluetooth.BluetoothDevice;
-
-import com.proto4.protopaja.DaliGear;
-
-/**
- * Created by user on 15.08.17.
- */
-
 public class ProtoListItem {
 
     private static final String TAG = ProtoListItem.class.getSimpleName();

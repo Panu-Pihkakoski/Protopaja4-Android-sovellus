@@ -5,15 +5,9 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Locale;
 
-/**
- * Created by user on 4.07.17.
- */
-
 public class DaliGear {
 
     private static final String TAG = DaliGear.class.getSimpleName();
-
-    //private String name;
 
     private boolean updated;
 
@@ -49,31 +43,6 @@ public class DaliGear {
 
     private static final byte DEFAULT_POWER_MIN = 0;
     private static final byte DEFAULT_POWER_MAX = (byte)254;
-
-
-    /*public DaliGear(byte[] _data) {
-        this("unknown", _data);
-    }*/
-
-    /*public DaliGear(String _name) {
-        this(_name, new byte[]{0, 0, 0});
-    }
-
-    public DaliGear(String _name, byte _id) {
-        this(_name, new byte[]{_id, 0, 0});
-    }
-
-    public DaliGear(String _name, byte[] _data) {
-        //name = _name;
-        data = new byte[DATA_LEN];
-        updated = false;
-        for (int i = 0; i < DATA_LEN; i++)
-            data[i] = i < _data.length ? _data[i] : 0;
-        if (data[DATA_POWER_MIN] == 0)
-            data[DATA_POWER_MIN] = DEFAULT_POWER_MIN;
-        if (data[DATA_POWER_MAX] == 0)
-            data[DATA_POWER_MAX] = DEFAULT_POWER_MAX;
-    }*/
 
     public DaliGear(byte _id) {
         this(new byte[]{_id, 0, 0});
@@ -169,10 +138,6 @@ public class DaliGear {
         data[index] = value;
     }
 
-    /*public void setId(byte _id) {
-        data[DATA_ID] = _id;
-    }*/
-
     public void setStatus(byte _status) {
         data[DATA_STATUS] = _status;
     }
@@ -193,10 +158,6 @@ public class DaliGear {
     public void setMaxPower(byte maxPower) {
         data[DATA_POWER_MAX] = maxPower;
     }
-
-    /*public void setName(String _name){
-        name = _name;
-    }*/
 
     public void setConstants(byte[] bytes) {
         if (bytes.length < 5) {
@@ -231,22 +192,14 @@ public class DaliGear {
         Log.d(TAG, "getInfoString()");
         byte status = gear.data[DATA_STATUS];
         String info = "";
-        //info += "Power level =         " + getPowerInt() + "\n";
         info += String.format(Locale.getDefault(), "Power level = %14d\n", gear.getPowerInt());
-        //info += "Power min =           " + getDataByteInt(DATA_POWER_MIN) + "\n";
         info += String.format(Locale.getDefault(), "Power min = %16d\n", gear.getDataByteInt(DATA_POWER_MIN));
-        //info += "Power max =           " + getDataByteInt(DATA_POWER_MAX) + "\n";
         info += String.format(Locale.getDefault(), "Power max = %16d\n", gear.getDataByteInt(DATA_POWER_MAX));
-        //info += "Color temperature =   " + getDataByteInt(DATA_COLOR_TEMP) + "\n";
         info += String.format(Locale.getDefault(), "Color temp = %14dK\n", gear.getDataByteInt(DATA_COLOR_TEMP)*100);
-        //info += "Color coolest =       " + getDataByteInt(DATA_COLOR_COOLEST) + "\n";
         info += String.format(Locale.getDefault(), "Color coolest = %11dK\n", gear.getDataByteInt(DATA_COLOR_COOLEST)*100);
-        //info += "Color warmest =       " + getDataByteInt(DATA_COLOR_WARMEST) + "\n";
         info += String.format(Locale.getDefault(), "Color warmest = %11dK\n", gear.getDataByteInt(DATA_COLOR_WARMEST)*100);
-        //info += "Temp0 =               " + (getDataByteInt(DATA_TEMP_0) + (float)getDataByteInt(DATA_TEMP_0F)/100) + "\n";
         info += String.format(Locale.getDefault(), "Temp0 = %18.2f°C\n",
                 gear.getDataByteInt(DATA_TEMP_0) + (float)gear.getDataByteInt(DATA_TEMP_0F)/100);
-        //info += "Temp1 =               " + (getDataByteInt(DATA_TEMP_1) + (float)getDataByteInt(DATA_TEMP_1F)/100) + "\n";
         info += String.format(Locale.getDefault(), "Temp1 = %18.2f°C\n",
                 gear.getDataByteInt(DATA_TEMP_1) + (float)gear.getDataByteInt(DATA_TEMP_1F)/100);
         info += (status & STATUS_BALLAST_FAILURE) == 0 ? "" : "(!) Ballast failure\n";

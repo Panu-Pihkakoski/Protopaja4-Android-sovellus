@@ -78,24 +78,6 @@ public class GearFragment extends Fragment {
         return fragment;
     }
 
-    /*
-    public static GearFragment newInstance(DaliGear gear) {
-        return newInstance(gear, null);
-    }
-
-    public static GearFragment newInstance(DaliGear gear, GearFragmentListener listener) {
-        GearFragment fragment = new GearFragment();
-        fragment.gear = gear;
-        fragment.listener = listener;
-        fragment.lastPowerLevel = fragment.powerLevel = gear.getPowerInt();
-        fragment.minPower = gear.getMinPowerInt();
-        fragment.maxPower = gear.getMaxPowerInt();
-        fragment.infoText = gear.getInfoString(gear);
-        fragment.newName = gear.getName();
-        return fragment;
-    }
-    */
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -231,11 +213,6 @@ public class GearFragment extends Fragment {
         colorWarmest = gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST);
         colorCoolest = gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST);
         colorTemp = gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP);
-        /*
-        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
-        colorTempSlider.setVisibility(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP_CAP) != 0 && gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST)
-                   > gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST) ? View.VISIBLE : View.GONE);
-        */
         infoText = DaliGear.getInfoString(gear);
     }
 
@@ -246,33 +223,11 @@ public class GearFragment extends Fragment {
         maxPower = powerMax;
         colorWarmest = colorTempWarmest;
         colorCoolest = colorTempCoolest;
-
-        /*if (powerSlider != null) {
-            if (minPower == maxPower)
-                powerSlider.setVisibility(View.GONE);
-            else {
-                powerSlider.setMinValue(minPower);
-                powerSlider.setMaxValue(maxPower);
-            }
-        }
-        if (colorTempSlider != null) {
-            if (colorTempWarmest == colorTempCoolest) // should also test gear:coĺorTempCap
-                colorTempSlider.setVisibility(View.GONE);
-            else {
-                colorTempSlider.setMinValue(colorTempWarmest);
-                colorTempSlider.setMaxValue(colorTempCoolest);
-            }
-        }*/
     }
 
     public void setSliderValues(int powerLevel, int colorTemp) {
         this.powerLevel = powerLevel;
         this.colorTemp = colorTemp;
-        /*if (powerSlider != null)
-            powerSlider.setValue(powerLevel);
-        if (colorTempSlider != null)
-            colorTempSlider.setValue(colorTemp);
-        */
     }
 
     public void setInfoText(String infoText) {
@@ -333,34 +288,9 @@ public class GearFragment extends Fragment {
 
     public void update() {
         Log.d(TAG, "update()");
-        /*
-        powerSlider.setMinValue(gear.getMinPowerInt());
-        powerSlider.setMaxValue(gear.getMaxPowerInt());
-        powerSlider.setValue(gear.getPowerInt());
-        colorTempSlider.setMinValue(gear.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
-        colorTempSlider.setMaxValue(gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
-        colorTempSlider.setValue(gear.getDataByteInt(DaliGear.DATA_COLOR_TEMP));
-        if (gear.getDataByteInt(DaliGear.DATA_COLOR_COOLEST) == 0) {
-            boolean colorTempCap = false;
-            int coolest = 0;
-            int warmest = 0;
-            if (gear.isGroup()) {
-                for (DaliGear g : gear.getGroup()) {
-                    if (g.getDataByteInt(DaliGear.DATA_COLOR_TEMP_CAP) != 0) {
-                        colorTempCap = true;
-                        coolest = Math.max(coolest, g.getDataByteInt(DaliGear.DATA_COLOR_COOLEST));
-                        warmest = Math.min(warmest, g.getDataByteInt(DaliGear.DATA_COLOR_WARMEST));
-                    }
-                }
-            }
-            if (!colorTempCap)
-                colorTempSlider.setVisibility(View.GONE);
-            else {
-                colorTempSlider.setMinValue(warmest);
-                colorTempSlider.setMaxValue(coolest);
-            }
-        }
-        */
+
+        // TODO: update contents
+
         infoViewText.setText(infoText);
     }
 

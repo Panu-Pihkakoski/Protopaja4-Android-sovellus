@@ -183,11 +183,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         Arrays.fill(groups, 255);
         groupNames = new String[GROUPS_LEN];
 
-        // TODO: remove
-        //gearMap = new HashMap();
-        //groupMap = new HashMap();
-
-
         infoTextView = (TextView) findViewById(R.id.main_info_text_view);
         infoTextView.setText("No devices");
         infoTextView.setTextSize(32); // maybe should check screen dimensions before setting text size
@@ -532,8 +527,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         gearFragment.setItemIsGroup(isGroup);
         gearFragment.setItemId(id);
 
-        //gearFragment = GearFragment.newInstance(gear, this);
-
         getFragmentManager().beginTransaction()
                 .replace(R.id.main_fragment_content, gearFragment)
                 .commit(); // sets gear fragment on fragment container
@@ -612,10 +605,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private void showGears() {
         if (activeFragment != listFragment) showListFragment();
-        //if (listFragment.isListingGears()) {
-        //    Log.d(TAG, "showGears(): listFragment is already listing gears");
-        //    return;
-        //}
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -636,11 +626,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
                 if (gears[0] != null) {
                     toolbar.setTitle(R.string.gear_list_title);
-                    //listFragment.update();
-
                     showRoomTemperature();
-                    //infoTextView.setVisibility(View.GONE);
-
                 } else {
                     infoTextView.setText(R.string.no_gears);
                     infoTextView.setVisibility(View.VISIBLE);
@@ -760,7 +746,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
 
         Log.d(TAG, "setGearPower(): setting power " + powerLevel + " for gear \"" + gearNames[id] + "\"(id=" + id + ")");
-        //g.setPower((byte)powerLevel);
+
         g.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
 
         runOnUiThread(new Runnable() {
@@ -787,9 +773,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             return;
         }
 
-        //group.setDataByte(DaliGear.DATA_POWER, (byte)powerLevel);
-
-        //ArrayList<DaliGear> gears = group.getGroup();
         DaliGear gear;
         int relativePower;
         for (int i = 0; i < GEARS_LEN; i++) {
@@ -836,8 +819,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             Log.w(TAG, "unable to set group color temperature: group not found");
             return;
         }
-        //group.setDataByte(DaliGear.DATA_COLOR_TEMP, (byte)colorTemp);
-        //ArrayList<DaliGear> gears = group.getGroup();
 
         for (int i = 0; i < GEARS_LEN; i++) {
             if ((group & (1 << i)) == 0) continue;

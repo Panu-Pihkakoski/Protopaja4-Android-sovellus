@@ -10,10 +10,6 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
-/**
- * Created by user on 4.08.17.
- */
-
 public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = RoundSlider.class.getSimpleName();
