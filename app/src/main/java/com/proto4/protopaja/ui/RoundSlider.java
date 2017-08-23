@@ -194,6 +194,10 @@ public class RoundSlider extends SurfaceView implements SurfaceHolder.Callback {
 
     private void renderContents() {
         Canvas canvas = getHolder().lockCanvas();
+        if (canvas == null) {
+            Log.w(TAG, "renderContents: canvas is null");
+            return;
+        }
         canvas.drawColor(0xffffffff);
         if (slider != null)
             slider.draw(canvas);
