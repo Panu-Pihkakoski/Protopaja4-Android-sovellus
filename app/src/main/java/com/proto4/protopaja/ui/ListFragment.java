@@ -120,6 +120,8 @@ public class ListFragment extends Fragment {
         if (groupPosition == -1) {
             Log.d(TAG, "expand: group not found");
             groupPosition = 0;
+        } else if (items.size() == 0) { // remove group if it contains no gears
+            listItems.remove(groupPosition);
         }
         if (expandedGroupId != groupId || forceExpand) {
             for (int i = 0; i < items.size(); i++) {

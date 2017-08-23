@@ -991,8 +991,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         }
         if (items.size() == 0) {
-            Log.d(TAG, "expandListGroup: nothing to expand");
-            return;
+            Log.d(TAG, "expandListGroup: nothing to expand, group will be removed");
         }
         listFragment.expand(id, items, force);
         lastExpandedItem = item;
