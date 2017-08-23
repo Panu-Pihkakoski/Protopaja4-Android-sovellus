@@ -66,7 +66,7 @@ public class ListFragment extends Fragment {
     public void clear() {
         listItems.clear();
         selectedItems.clear();
-        expandedGroupId = 0;
+        expandedGroupId = -1;
         //recyclerView.getAdapter().notifyDataSetChanged();
     }
 
@@ -195,7 +195,8 @@ public class ListFragment extends Fragment {
     }
 
     public void removeExpandedGroup() {
-        if (expandedGroupId == -1 || expandedGroupId == 0) return;
+        Log.d(TAG, "removeExpandedGroup: expandedGroupId==" + expandedGroupId);
+        if (expandedGroupId == -1 || expandedGroupId == 255) return;
         ProtoListItem expanded = getExpandedGroup();
         if (expanded == null) {
             Log.d(TAG, "removeExpandedGroup: expanded group not found");

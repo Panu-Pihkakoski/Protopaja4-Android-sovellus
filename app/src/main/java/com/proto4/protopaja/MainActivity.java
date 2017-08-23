@@ -700,7 +700,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     @Override
-    public void onListFragmentAction(int which, ProtoListItem item) {
+    public void onListFragmentAction(int which, final ProtoListItem item) {
 
         switch (which) {
             case ListFragment.ITEM_ACTION_OPEN:
@@ -715,7 +715,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 break;
             case ListFragment.ACTION_EXPAND_GROUP:
                 if (item == null) break;
-                expandListGroup(item, false);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        expandListGroup(item, false);
+                    }
+                });
                 break;
             case ListFragment.ACTION_GROUP_SELECTED:
                 if (item == null) break;
@@ -892,7 +897,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
     private void removeCheckedItemsFromGroup(final int groupId) {
-        if (groupId == NO_GEAR_DATA) return;
+        if (groupId == 255) return;
 
         int selected = listFragment.getSelected();
 
@@ -913,6 +918,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 if (groups[groupId] == 0) listFragment.removeExpandedGroup();
                 listFragment.removeSelectedItems();
                 listFragment.clearSelection();
+                listFragment.update();
             }
         });
     }
