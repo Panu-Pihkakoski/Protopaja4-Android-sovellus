@@ -43,10 +43,18 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    private static final boolean DEBUG = true;
+
+    // UI
     private Toolbar toolbar;
     private ProgressBar progressBar;
 
     private Menu overflowMenu;
+    // Overflow menu group flags
+    private static final byte F_MENU_MAIN = 1;
+    private static final byte F_MENU_GEAR = 2;
+    private static final byte F_MENU_GEAR_SELECTION = 4;
+    private static final byte F_MENU_DEBUG = 8;
 
     private TextView infoTextView;
 
@@ -59,51 +67,40 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     private ProtoListItem lastExpandedItem;
 
+
+    // Bluetooth
     private BleManager bleManager;
     private BleScanner bleScanner;
 
-    private boolean scanning, skipConnect;
-
     private BluetoothDevice connectedDevice;
     private String deviceAddress;
-
     private ArrayList<BluetoothDevice> foundDevices;
 
-    private DaliGear[] gears;
-    private int[] groups;
-
-    private String[] gearNames;
-    private String[] groupNames;
-
-
     private BluetoothGattService uartService;
-
     private byte[] currentMessage;
 
+    private boolean scanning, skipConnect;
+
+    // Gear/group/name arrays
+    private DaliGear[] gears;
+    private int[] groups;
+    private String[] gearNames;
+    private String[] groupNames;
+    public static final int GEARS_LEN = 32;
+    public static final int GROUPS_LEN = 4;
 
     private Handler handler;
 
 
-    public static final int GEARS_LEN = 32;
-    public static final int GROUPS_LEN = 4;
-
-
+    // Shared preferences
     private static final String SHARED_PREFS_MAIN = "SHARED_PREFS_MAIN";
-
     private static final String DEVICE_ADDRESS = "DEVICE_ADDRESS";
     private static final String LAST_DEVICE_ADDRESS = "LAST_DEVICE_ADDRESS";
     private static final String AUTO_CONNECT = "AUTO_CONNECT";
     private static final String SAVED_GEARS = "SAVED_GEARS";
 
-    private static final byte F_MENU_MAIN = 1;
-    private static final byte F_MENU_GEAR = 2;
-    private static final byte F_MENU_GEAR_SELECTION = 4;
-    private static final byte F_MENU_DEBUG = 8;
 
-
-    private static final byte GROUP_ALL = (byte)255;
-    private static final byte NO_GEAR_DATA = (byte)255;
-
+    // Dali commands
     private static final byte DALI_COMMAND_OFF = 0;
     private static final byte DALI_COMMAND_DIM_UP = 1;
     private static final byte DALI_COMMAND_DIM_DOWN = 2;
@@ -116,19 +113,16 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private static final byte DALI_COMMAND_QUERY_STATUS = (byte)0x90;
     private static final byte DALI_COMMAND_QUERY_POWER_LEVEL = (byte)0xa0;
 
-
+    // Message types
     // controller to phone
     private static final byte MESSAGE_TYPE_GEAR_CONST = 'C';
     private static final byte MESSAGE_TYPE_GEAR_UPDATE = 'U';
-    private static final byte MESSAGE_TYPE_RESPONSE = 'A';
 
     // phone to controller
     private static final byte MESSAGE_TYPE_QUERY = 'Q';
     private static final byte MESSAGE_TYPE_COMMAND = 'D';
     private static final byte MESSAGE_TYPE_CTEMP = 'T';
     private static final byte MESSAGE_TYPE_INIT = 'I';
-
-
     private static final byte MESSAGE_TYPE_BROADCAST = 'B';
 
     // common
@@ -136,9 +130,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private static final byte MESSAGE_TYPE_GROUP = 'G';
 
     private static final byte MESSAGE_END = '!';
-
-    private static final int MESSAGE_IND_TYPE = 0;
-    private static final int MESSAGE_IND_ID = 1;
 
 
     private static final int REQUEST_ENABLE_BT = 1;
@@ -224,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         overflowMenu = menu;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main_menu, menu);
-        setVisibleMenuGroups((byte)(F_MENU_MAIN)); // | F_MENU_DEBUG));
+        setVisibleMenuGroups((byte)(F_MENU_MAIN | (DEBUG ? F_MENU_DEBUG : 0)));
         return true;
     }
 
@@ -443,7 +434,10 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             }
         } else Log.d(TAG, "loadValues: shared preferences not found");
     }
-    
+
+
+    // methods for manipulating ui
+
     private void showHelp() {
         if (helpFragment == null) {
             helpFragment = new HelpFragment();
@@ -458,8 +452,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         activeFragment = helpFragment;
     }
 
-    // show gear fragment containing control and info ui for gear at specified position,
-    // hides recycler list
+    // show gear fragment containing control and info ui for gear at specified position
     private void showGearFragment(final int id, final boolean isGroup) {
         Log.d(TAG, "showGearFragment(id=" + id + ", isGroup=" + (isGroup ? "true)" : "false)"));
         if (!isGroup && id > GEARS_LEN-1) {
@@ -567,7 +560,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 .commit(); // sets gear list fragment on fragment container
 
         showBackNavigation(false);
-        setVisibleMenuGroups((byte)(F_MENU_MAIN));// | F_MENU_DEBUG));
+        setVisibleMenuGroups((byte)(F_MENU_MAIN | (DEBUG ? F_MENU_DEBUG : 0)));
 
         runOnUiThread(new Runnable() {
             @Override
@@ -656,6 +649,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         });
     }
 
+    // fragment interaction callbacks
 
     // callback to handle gear fragment ui actions
     @Override
@@ -734,7 +728,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
                 setVisibleMenuGroups(F_MENU_GEAR_SELECTION);
                 break;
             case ListFragment.ACTION_SELECTION_END:
-                setVisibleMenuGroups((byte)(F_MENU_MAIN));// | F_MENU_DEBUG));
+                setVisibleMenuGroups((byte)(F_MENU_MAIN | (DEBUG ? F_MENU_DEBUG : 0)));
                 break;
             default:
                 Log.d(TAG, "unknown gear list fragment action");
@@ -742,7 +736,8 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         }
     }
 
-    // set power level for gear with id=gearId
+
+    // set gear power level and send the value to central unit
     private void setGearPower(int id, int powerLevel) {
         DaliGear g = gears[id];
         if (g == null) {
@@ -793,6 +788,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
 
     }
 
+    // sets gear color temperature and sends the value to central unit
     private void setGearColorTemperature(int id, int colorTemp) {
         DaliGear gear = gears[id];
         if (gear == null) return;
@@ -828,6 +824,23 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         for (int i = 0; i < GEARS_LEN; i++) {
             if ((group & (1 << i)) == 0) continue;
             setGearColorTemperature(i, colorTemp);
+        }
+    }
+
+    private void sendInitialization() {
+        byte[] bytes = {MESSAGE_TYPE_INIT, MESSAGE_END};
+
+        if (bluetoothEnabled() && uartService != null) {
+            Log.d(TAG, "sending init message");
+            sendData(bytes);
+        } else {
+            Log.d(TAG, "bluetooth not ready, resend init message after delay");
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    sendInitialization();
+                }
+            }, 1500);
         }
     }
 
@@ -947,12 +960,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     }
 
 
-    // sets gear constants
+    // sets gear constants, should be called only when received constants message from central
     // if matching id isn't found, new gear will be added
     private int setGearConstants(byte[] bytes) {
         // bytes = { id, min power, max power, color temp cap, coolest, warmest }
         final int gearId = bytes[0] < 0 ? bytes[0] + 256 : bytes[0];
-        if (gearId == NO_GEAR_DATA) {
+        if (gearId == 255) {
             Log.d(TAG, "setGearConstants(): No device specified");
             return -1;
         }
@@ -991,7 +1004,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         // bytes = { id, status, power level, color temp }
         final int gearId = bytes[0] < 0 ? bytes[0] + 256 : bytes[0];
 
-        if (gearId == NO_GEAR_DATA) {
+        if (gearId == 255) {
             Log.d(TAG, "updateGear(): No device specified");
             return -1;
         }
@@ -1037,32 +1050,6 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
         });
 
         return 0;
-    }
-
-    private void sendInitialization() {
-        byte[] bytes = {MESSAGE_TYPE_INIT, MESSAGE_END};
-
-        if (bluetoothEnabled() && uartService != null) {
-            Log.d(TAG, "sending init message");
-            sendData(bytes);
-        } else {
-            Log.d(TAG, "bluetooth not ready, resend init message");
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    sendInitialization();
-                }
-            }, 1500);
-        }
-    }
-
-
-    private void parseResponse(byte[] bytes) {
-        if (bytes.length == 1) { // no id
-            Log.d(TAG, "Response: value=" + bytes[0]);
-        } else { // id, value
-            Log.d(TAG, "Response: id=" + bytes[0] + " value=" + bytes[1]);
-        }
     }
 
     // bluetooth
@@ -1353,7 +1340,7 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
     private void parseMessage(byte[] bytes) {
         final String data = new String(bytes, Charset.forName("UTF-8"));
         Log.d(TAG, "parsing message: \"" + data + "\"");
-        switch (bytes[MESSAGE_IND_TYPE]) {
+        switch (bytes[0]) {     // switch message type
             case MESSAGE_TYPE_GEAR_CONST:
                 Log.d(TAG, "message: gear constants");
                 setGearConstants(Arrays.copyOfRange(bytes, 1, bytes.length));
@@ -1365,15 +1352,12 @@ public class MainActivity extends AppCompatActivity implements BleScanner.ScanLi
             case MESSAGE_TYPE_GROUP:
                 parseGroupMessage(Arrays.copyOfRange(bytes, 1, bytes.length));
                 break;
-            case MESSAGE_TYPE_RESPONSE:     // not implemented
-                parseResponse(Arrays.copyOfRange(bytes, 1, bytes.length));
-                break;
             case MESSAGE_TYPE_EXCEPTION:    // not implemented
                 Log.d(TAG, "message: exception");
                 // handle exception
                 break;
             default:
-                Log.d(TAG, "message: not recognized (" + (int)bytes[MESSAGE_IND_TYPE] + ")");
+                Log.d(TAG, "message: not recognized (" + (int)bytes[0] + ")");
                 break;
         }
     }
