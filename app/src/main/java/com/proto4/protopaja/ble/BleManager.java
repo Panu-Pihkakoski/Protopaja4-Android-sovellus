@@ -1,3 +1,5 @@
+// Source: https://github.com/adafruit/Bluefruit_LE_Connect_Android (MIT License)
+
 package com.proto4.protopaja.ble;
 
 import android.bluetooth.BluetoothAdapter;
@@ -15,9 +17,6 @@ import android.util.Log;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Created by user on 29.06.17.
- */
 
 public class BleManager implements BleGattHandler.GattListener{
 

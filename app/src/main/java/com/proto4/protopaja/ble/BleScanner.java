@@ -1,3 +1,5 @@
+// Source: https://github.com/adafruit/Bluefruit_LE_Connect_Android (MIT License)
+
 package com.proto4.protopaja.ble;
 
 import android.bluetooth.BluetoothAdapter;
@@ -16,10 +18,6 @@ import com.proto4.protopaja.R;
 
 import java.util.ArrayList;
 import java.util.List;
-
-/**
- * Created by user on 29.06.17.
- */
 
 public class BleScanner {
 
@@ -133,11 +131,9 @@ public class BleScanner {
                         + dataString + ")");
             }
 
-            // filter
+            // filter irrelevant results
             // data[25] : 0x19, data[26] : 0x31, data[27] : 0xd4
             boolean isBlec = (data[25] == (byte)0x19 && data[26] == (byte)0x31 && data[27] == (byte)0xd4);
-            if (isBlec)
-                Log.d(TAG, "BBBBLLLLEEEECCCC");
 
             if (!isBlec) return;
 

@@ -1,3 +1,5 @@
+// Source: https://github.com/adafruit/Bluefruit_LE_Connect_Android (MIT License)
+
 package com.proto4.protopaja.ble;
 
 import android.bluetooth.BluetoothGatt;
@@ -10,10 +12,6 @@ import android.util.Log;
 
 import java.util.LinkedList;
 import java.util.UUID;
-
-/**
- * Created by user on 30.06.17.
- */
 
 public class BleGattHandler extends BluetoothGattCallback {
     private final static String TAG = BleGattHandler.class.getSimpleName();
